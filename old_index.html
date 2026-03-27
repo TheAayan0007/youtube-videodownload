@@ -1,1 +1,471 @@
-for now
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prism — YouTube Media Suite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070508;--s1:#0e0710;--s2:#160c1a;
+  --r:#d90020;--r2:#ff2240;--r3:#ff6070;
+  --rg:rgba(217,0,32,.10);--rb:rgba(217,0,32,.22);
+  --t:#f2edf4;--t2:#8a7e92;--t3:#332838;
+  --bd:#1c1020;--bd2:#2a1830;
+  --mono:'JetBrains Mono',monospace;
+  --head:'Syne',sans-serif;
+  --body:'DM Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--t);font-family:var(--body);overflow-x:hidden;cursor:none;}
+a{text-decoration:none;color:inherit;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--r);}
+::-webkit-scrollbar-track{background:transparent;}
+
+/* cursor */
+#c{position:fixed;width:8px;height:8px;border-radius:50%;background:var(--r);
+   pointer-events:none;z-index:9999;transform:translate(-50%,-50%);
+   box-shadow:0 0 14px var(--r);}
+#cr{position:fixed;width:32px;height:32px;border-radius:50%;
+    border:1px solid rgba(217,0,32,.4);pointer-events:none;z-index:9998;
+    transform:translate(-50%,-50%);transition:all .18s ease;}
+body:has(a:hover) #cr,body:has(button:hover) #cr{width:44px;height:44px;border-color:var(--r2);}
+
+/* canvas */
+#gc{position:fixed;inset:0;pointer-events:none;z-index:0;}
+
+/* util */
+.z{position:relative;z-index:1;}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease;}
+.reveal.in{opacity:1;transform:none;}
+.tag{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:100px;
+     background:var(--rg);border:1px solid var(--rb);
+     font-size:11px;font-weight:500;color:var(--r3);letter-spacing:1.8px;text-transform:uppercase;font-family:var(--mono);}
+.tag-dot{width:6px;height:6px;border-radius:50%;background:var(--r);box-shadow:0 0 8px var(--r);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;
+    display:flex;align-items:center;padding:0 36px;
+    border-bottom:1px solid transparent;transition:border-color .3s,background .3s;}
+nav.on{background:rgba(7,5,8,.92);backdrop-filter:blur(20px);border-color:var(--bd);}
+.nlogo{font-family:var(--head);font-size:19px;font-weight:800;display:flex;align-items:center;gap:9px;letter-spacing:-.4px;}
+.nlogo-dot{width:9px;height:9px;border-radius:50%;background:var(--r);
+           box-shadow:0 0 12px var(--r),0 0 28px rgba(217,0,32,.4);animation:blink 2s infinite;}
+.nlinks{display:flex;align-items:center;gap:2px;margin-left:auto;margin-right:24px;}
+.nlinks a{font-size:13px;color:var(--t2);padding:6px 14px;border-radius:8px;transition:color .2s,background .2s;}
+.nlinks a:hover{color:var(--t);background:rgba(255,255,255,.04);}
+.ncta{background:var(--r);color:#fff;padding:9px 20px;border-radius:9px;font-size:13px;font-weight:500;
+      box-shadow:0 0 24px rgba(217,0,32,.35);transition:background .2s,box-shadow .2s,transform .15s;}
+.ncta:hover{background:var(--r2);box-shadow:0 0 36px rgba(255,34,64,.5);transform:translateY(-1px);}
+
+/* hero */
+#hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:100px 24px 80px;text-align:center;position:relative;overflow:hidden;}
+.hero-glow{position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:800px;height:600px;
+           background:radial-gradient(ellipse 50% 40% at 50% 0%,rgba(217,0,32,.15),transparent);pointer-events:none;}
+h1{font-family:var(--head);font-size:clamp(56px,10vw,118px);font-weight:800;
+   line-height:.9;letter-spacing:-4px;margin-bottom:30px;}
+h1 em{font-style:normal;display:block;
+      background:linear-gradient(110deg,#ff2240 0%,#ff8090 45%,#ff2240 100%);
+      background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;animation:sh 5s linear infinite;}
+@keyframes sh{to{background-position:200% 0;}}
+.hsub{font-size:clamp(15px,1.8vw,18px);color:var(--t2);max-width:480px;line-height:1.7;font-weight:300;margin-bottom:44px;}
+.hbtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:13px 26px;border-radius:10px;font-size:14px;font-weight:500;transition:all .2s;}
+.btn-r{background:var(--r);color:#fff;box-shadow:0 0 36px rgba(217,0,32,.4),0 8px 28px rgba(0,0,0,.35);}
+.btn-r:hover{background:var(--r2);transform:translateY(-2px);box-shadow:0 0 48px rgba(255,34,64,.55);}
+.btn-o{background:rgba(255,255,255,.04);border:1px solid var(--bd2);color:var(--t2);}
+.btn-o:hover{background:rgba(255,255,255,.07);color:var(--t);transform:translateY(-1px);}
+.hbar{display:flex;gap:48px;margin-top:72px;padding-top:48px;border-top:1px solid var(--bd);justify-content:center;flex-wrap:wrap;}
+.hstat-n{font-family:var(--mono);font-size:30px;font-weight:500;color:var(--r2);display:block;line-height:1;}
+.hstat-l{font-size:11px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-top:5px;}
+
+/* section */
+.sec{max-width:1100px;margin:0 auto;padding:100px 24px;}
+.slabel{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--r3);text-transform:uppercase;
+        display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.slabel::before{content:'';width:28px;height:1px;background:var(--r);}
+h2{font-family:var(--head);font-size:clamp(32px,4.5vw,52px);font-weight:800;letter-spacing:-1.8px;line-height:1.0;margin-bottom:14px;}
+.ssub{font-size:16px;color:var(--t2);line-height:1.7;font-weight:300;max-width:460px;}
+.div{max-width:1100px;margin:0 auto;height:1px;background:var(--bd);position:relative;}
+.div::after{content:'';position:absolute;left:50%;top:-3px;transform:translateX(-50%);
+  width:6px;height:6px;border-radius:50%;background:var(--r);box-shadow:0 0 10px var(--r);}
+
+/* install */
+#install .sec{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;}
+.method-card{background:var(--s1);border:1px solid var(--bd);border-radius:16px;overflow:hidden;transition:border-color .25s;}
+.method-card:hover{border-color:var(--bd2);}
+.mc-head{padding:20px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;}
+.mc-num{font-family:var(--mono);font-size:11px;color:var(--r3);background:var(--rg);border:1px solid var(--rb);border-radius:7px;padding:4px 9px;letter-spacing:1px;}
+.mc-title{font-family:var(--head);font-size:16px;font-weight:700;}
+.mc-badge{margin-left:auto;font-size:10px;font-family:var(--mono);color:var(--t3);letter-spacing:1px;}
+.mc-body{padding:22px 24px;display:flex;flex-direction:column;gap:14px;}
+.step-row{display:flex;align-items:flex-start;gap:14px;}
+.snum{width:26px;height:26px;border-radius:7px;background:var(--rg);border:1px solid var(--rb);color:var(--r3);
+      font-family:var(--mono);font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.step-text strong{display:block;font-size:13px;color:var(--t);font-weight:500;margin-bottom:2px;}
+.step-text span{font-size:12px;color:var(--t2);line-height:1.5;}
+.cmd-box{background:rgba(0,0,0,.45);border:1px solid var(--bd);border-radius:9px;padding:12px 16px;
+         font-family:var(--mono);font-size:12px;color:#5ef;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.cmd-box .pr{color:var(--r3);margin-right:6px;}
+.cbtn{background:rgba(255,255,255,.05);border:1px solid var(--bd2);color:var(--t2);font-size:10px;
+      padding:4px 10px;border-radius:6px;cursor:pointer;transition:all .2s;font-family:var(--body);white-space:nowrap;flex-shrink:0;}
+.cbtn:hover{background:rgba(255,255,255,.09);color:var(--t);}
+.cbtn.ok{color:#4ade80;border-color:rgba(74,222,128,.3);}
+.os-pills{display:flex;gap:7px;flex-wrap:wrap;}
+.os-pill{padding:4px 12px;border-radius:100px;font-size:11px;background:rgba(255,255,255,.04);border:1px solid var(--bd);color:var(--t2);}
+.os-pill.hi{background:var(--rg);border-color:var(--rb);color:var(--r3);}
+.note{font-size:11px;color:var(--t3);background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;line-height:1.6;font-family:var(--mono);}
+.note b{color:var(--r3);}
+
+/* platforms */
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:56px;}
+.pc{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:28px 24px;
+    transition:border-color .25s,background .25s;position:relative;overflow:hidden;}
+.pc::before{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--r),transparent);transform:scaleX(0);transform-origin:left;transition:transform .3s;}
+.pc:hover{border-color:var(--bd2);background:var(--s2);}
+.pc:hover::before{transform:scaleX(1);}
+.pc-icon{font-size:26px;margin-bottom:14px;}
+.pc-name{font-family:var(--head);font-size:18px;font-weight:700;margin-bottom:3px;}
+.pc-sub{font-size:11px;color:var(--t3);font-family:var(--mono);letter-spacing:.5px;margin-bottom:16px;}
+.pc-methods{display:flex;flex-direction:column;gap:8px;}
+.pc-method{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--t2);line-height:1.4;}
+.pc-method::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--r);flex-shrink:0;margin-top:5px;}
+.pc-method span{color:var(--r3);font-weight:500;}
+.pc-dlbtn{display:inline-flex;align-items:center;gap:7px;margin-top:20px;padding:9px 18px;border-radius:9px;
+          font-size:12px;font-weight:500;background:var(--rg);border:1px solid var(--rb);color:var(--r3);transition:all .2s;}
+.pc-dlbtn:hover{background:rgba(217,0,32,.2);color:var(--t);}
+
+/* features */
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+       background:var(--bd);border:1px solid var(--bd);border-radius:16px;overflow:hidden;margin-top:56px;}
+.fc{background:var(--bg);padding:28px 24px;position:relative;overflow:hidden;transition:background .25s;}
+.fc::after{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;
+  background:linear-gradient(90deg,transparent,var(--r),transparent);transform:scaleX(0);transition:transform .35s ease;}
+.fc:hover{background:var(--s1);}
+.fc:hover::after{transform:scaleX(1);}
+.fi{font-size:22px;margin-bottom:14px;display:block;}
+.ft{font-family:var(--head);font-size:15px;font-weight:700;color:var(--t);margin-bottom:6px;}
+.fd{font-size:13px;color:var(--t2);line-height:1.6;}
+.fchip{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:9px;letter-spacing:1.5px;
+       text-transform:uppercase;color:var(--r3);background:var(--rg);border:1px solid var(--rb);border-radius:100px;padding:3px 10px;}
+
+/* requirements */
+.rlist{display:flex;flex-direction:column;gap:1px;background:var(--bd);border:1px solid var(--bd);border-radius:14px;overflow:hidden;margin-top:48px;}
+.rl{display:flex;align-items:center;gap:20px;background:var(--bg);padding:17px 22px;transition:background .2s;}
+.rl:hover{background:var(--s1);}
+.rl-icon{font-size:17px;width:32px;text-align:center;}
+.rl-name{font-weight:500;font-size:14px;color:var(--t);min-width:90px;}
+.rl-ver{font-family:var(--mono);font-size:11px;color:var(--r3);min-width:70px;}
+.rl-desc{font-size:13px;color:var(--t2);flex:1;}
+.rl-auto{font-family:var(--mono);font-size:10px;color:#4ade80;background:rgba(74,222,128,.07);
+         border:1px solid rgba(74,222,128,.2);border-radius:100px;padding:3px 10px;white-space:nowrap;}
+
+/* footer */
+footer{position:relative;z-index:1;border-top:1px solid var(--bd);padding:40px 36px;
+       display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;}
+.flogo{font-family:var(--head);font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.fmid{text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3);line-height:1.8;letter-spacing:.5px;}
+.flinks{display:flex;gap:20px;justify-content:flex-end;}
+.flinks a{font-size:12px;color:var(--t3);transition:color .2s;}
+.flinks a:hover{color:var(--r2);}
+
+@media(max-width:820px){
+  #install .sec{grid-template-columns:1fr;}
+  .pgrid{grid-template-columns:1fr;}
+  .fgrid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:600px){
+  nav{padding:0 18px;}
+  .nlinks{display:none;}
+  .fgrid{grid-template-columns:1fr;}
+  h1{letter-spacing:-2px;}
+  footer{grid-template-columns:1fr;text-align:center;}
+  .flinks{justify-content:center;}
+  .rl-desc{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div id="c"></div>
+<div id="cr"></div>
+<canvas id="gc"></canvas>
+
+<nav id="nav">
+  <div class="nlogo"><div class="nlogo-dot"></div>Prism</div>
+  <div class="nlinks">
+    <a href="#install">Install</a>
+    <a href="#platforms">Platforms</a>
+    <a href="#features">Features</a>
+    <a href="#reqs">Requirements</a>
+  </div>
+  <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="ncta">Get Prism ↗</a>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero" class="z">
+  <div class="hero-glow"></div>
+  <div class="tag" style="margin-bottom:36px;"><div class="tag-dot"></div>YouTube Media Suite &nbsp;·&nbsp; v7.3</div>
+  <h1>Download<br><em>anything.</em></h1>
+  <p class="hsub">A premium desktop app for downloading YouTube videos, audio, playlists and thumbnails — with a handcrafted UI and real-time progress.</p>
+  <div class="hbtns">
+    <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="btn btn-r">↓&nbsp; Get Prism &nbsp;<span style="opacity:.5;font-size:11px;font-family:var(--mono)">Free</span></a>
+    <a href="https://github.com/TheAayan0007/prism" target="_blank" class="btn btn-o">GitHub →</a>
+  </div>
+  <div class="hbar">
+    <div class="hstat"><span class="hstat-n">8K</span><div class="hstat-l">Max Quality</div></div>
+    <div class="hstat"><span class="hstat-n">60fps</span><div class="hstat-l">Frame Rate</div></div>
+    <div class="hstat"><span class="hstat-n">∞</span><div class="hstat-l">Playlist Size</div></div>
+    <div class="hstat"><span class="hstat-n">Free</span><div class="hstat-l">Always</div></div>
+  </div>
+</section>
+
+<div class="div z"></div>
+
+<!-- ── INSTALL ── -->
+<section id="install" class="z">
+  <div class="sec">
+    <!-- Left: headings -->
+    <div>
+      <div class="slabel reveal">Installation</div>
+      <h2 class="reveal">Two ways<br>to install.</h2>
+      <p class="ssub reveal" style="margin-top:12px;">Choose Python for full control on any platform, or grab the pre-built executable for a one-click Windows experience.</p>
+    </div>
+
+    <!-- Right: method cards stacked -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+
+      <!-- Method 1 -->
+      <div class="method-card reveal">
+        <div class="mc-head">
+          <div class="mc-num">01</div>
+          <div class="mc-title">Python Method</div>
+          <div class="mc-badge">ALL PLATFORMS</div>
+        </div>
+        <div class="mc-body">
+          <div class="step-row">
+            <div class="snum">1</div>
+            <div class="step-text">
+              <strong>Clone the repo or download ZIP</strong>
+              <span>Get the source code from GitHub</span>
+            </div>
+          </div>
+          <div class="cmd-box">
+            <div><span class="pr">$</span>git clone https://github.com/TheAayan0007/prism</div>
+            <button class="cbtn" onclick="cp(this,'git clone https://github.com/TheAayan0007/prism')">Copy</button>
+          </div>
+          <div class="step-row">
+            <div class="snum">2</div>
+            <div class="step-text">
+              <strong>Run the installer</strong>
+              <span>Auto-installs all dependencies — PyQt6, yt-dlp, FFmpeg and more</span>
+            </div>
+          </div>
+          <div class="cmd-box">
+            <div><span class="pr">$</span>python installer.py</div>
+            <button class="cbtn" onclick="cp(this,'python installer.py')">Copy</button>
+          </div>
+          <div class="step-row">
+            <div class="snum">3</div>
+            <div class="step-text">
+              <strong>Launch Prism</strong>
+              <span>Run after a successful, error-free installation</span>
+            </div>
+          </div>
+          <div class="cmd-box">
+            <div><span class="pr">$</span>python main.py</div>
+            <button class="cbtn" onclick="cp(this,'python main.py')">Copy</button>
+          </div>
+          <div class="os-pills">
+            <div class="os-pill hi">Windows</div>
+            <div class="os-pill hi">macOS</div>
+            <div class="os-pill hi">Linux</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Method 2 -->
+      <div class="method-card reveal">
+        <div class="mc-head">
+          <div class="mc-num">02</div>
+          <div class="mc-title">Executable Method</div>
+          <div class="mc-badge">WINDOWS ONLY</div>
+        </div>
+        <div class="mc-body">
+          <div class="step-row">
+            <div class="snum">1</div>
+            <div class="step-text">
+              <strong>Download <code style="color:var(--r3);font-family:var(--mono)">installer.exe</code> from Releases</strong>
+              <span>Sets up all required runtimes and dependencies</span>
+            </div>
+          </div>
+          <div class="step-row">
+            <div class="snum">2</div>
+            <div class="step-text">
+              <strong>Download <code style="color:var(--r3);font-family:var(--mono)">Prism.exe</code> from Releases</strong>
+              <span>The main application — double-click to launch and start downloading</span>
+            </div>
+          </div>
+          <a href="https://github.com/TheAayan0007/prism/releases" target="_blank"
+             class="btn btn-r" style="font-size:13px;padding:11px 20px;justify-content:center;">
+            ↓&nbsp; Go to Releases
+          </a>
+          <div class="note"><b>Note:</b> Always run installer.exe first before launching Prism.exe to ensure all components are properly set up.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="div z"></div>
+
+<!-- ── PLATFORMS ── -->
+<section id="platforms" class="z">
+  <div class="sec" style="padding-bottom:80px;">
+    <div class="slabel reveal">Platform Support</div>
+    <h2 class="reveal">Runs everywhere<br>you work.</h2>
+    <p class="ssub reveal" style="margin-top:12px;">Native support across Windows, Linux distributions and macOS.</p>
+
+    <div class="pgrid">
+      <div class="pc reveal">
+        <div class="pc-icon">🪟</div>
+        <div class="pc-name">Windows</div>
+        <div class="pc-sub">10 / 11 · x64</div>
+        <div class="pc-methods">
+          <div class="pc-method"><span>Method 1:</span> Python + installer.py + main.py</div>
+          <div class="pc-method"><span>Method 2:</span> installer.exe + Prism.exe from Releases</div>
+        </div>
+        <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="pc-dlbtn">↓ Download .exe</a>
+      </div>
+      <div class="pc reveal">
+        <div class="pc-icon">🐧</div>
+        <div class="pc-name">Linux</div>
+        <div class="pc-sub">Kali · Parrot · Ubuntu · Debian</div>
+        <div class="pc-methods">
+          <div class="pc-method"><span>Python:</span> installer.py + main.py (all distros)</div>
+          <div class="pc-method"><span>Kali OS:</span> Pre-built binary in Releases</div>
+          <div class="pc-method"><span>Parrot OS:</span> Pre-built binary in Releases</div>
+        </div>
+        <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="pc-dlbtn">↓ Download for Linux</a>
+      </div>
+      <div class="pc reveal">
+        <div class="pc-icon">🍎</div>
+        <div class="pc-name">macOS</div>
+        <div class="pc-sub">Intel &amp; Apple Silicon</div>
+        <div class="pc-methods">
+          <div class="pc-method"><span>Python:</span> installer.py + main.py</div>
+          <div class="pc-method">FFmpeg auto-installed via Homebrew</div>
+        </div>
+        <a href="https://github.com/TheAayan0007/prism" target="_blank" class="pc-dlbtn">View Source →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="div z"></div>
+
+<!-- ── FEATURES ── -->
+<section id="features" class="z">
+  <div class="sec" style="padding-bottom:80px;">
+    <div class="slabel reveal">Features</div>
+    <h2 class="reveal">Everything built in.</h2>
+
+    <div class="fgrid reveal">
+      <div class="fc"><span class="fi">🎬</span><div class="ft">Video Download</div><div class="fd">Paste any YouTube URL. Fetches metadata, all formats and the thumbnail. Download from 4K down to 360p.</div><span class="fchip">Core</span></div>
+      <div class="fc"><span class="fi">🎵</span><div class="ft">Audio Only</div><div class="fd">Extract high-bitrate audio streams with language track selection. Perfect for music, podcasts and lectures.</div><span class="fchip">Audio</span></div>
+      <div class="fc"><span class="fi">📋</span><div class="ft">Playlist Batch</div><div class="fd">Load entire playlists, pick individual videos, and batch-download with per-video quality and a live queue.</div><span class="fchip">Batch</span></div>
+      <div class="fc"><span class="fi">🖼</span><div class="ft">Thumbnail Extractor</div><div class="fd">Download the highest-resolution thumbnail from any video in JPG or PNG at full native resolution.</div><span class="fchip">JPG / PNG</span></div>
+      <div class="fc"><span class="fi">📊</span><div class="ft">Download History</div><div class="fd">Every download logged with title, duration, date and save path. Persists via a local JSON file.</div><span class="fchip">Persistent</span></div>
+      <div class="fc"><span class="fi">⚡</span><div class="ft">Real-time Progress</div><div class="fd">Live speed, percentage and animated progress bars per video and for the overall batch. Non-blocking UI.</div><span class="fchip">Live</span></div>
+      <div class="fc"><span class="fi">🎛</span><div class="ft">Format Control</div><div class="fd">Video+Audio, Audio Only or Video Only. Choose quality, frame rate and language from smart dropdowns.</div><span class="fchip">Control</span></div>
+      <div class="fc"><span class="fi">🎨</span><div class="ft">Custom UI</div><div class="fd">Animated background, cursor glow, colour pickers for glows, nav bar position — all saved to preferences.</div><span class="fchip">Personalise</span></div>
+      <div class="fc"><span class="fi">🔒</span><div class="ft">100% Local</div><div class="fd">No accounts, no analytics, no cloud. Everything runs offline. Downloads go directly to your chosen folder.</div><span class="fchip">Private</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="div z"></div>
+
+<!-- ── REQUIREMENTS ── -->
+<section id="reqs" class="z">
+  <div class="sec" style="padding-bottom:80px;">
+    <div class="slabel reveal">Requirements</div>
+    <h2 class="reveal">What you need.</h2>
+    <p class="ssub reveal" style="margin-top:12px;margin-bottom:0;">installer.py handles every item automatically — this is just for reference.</p>
+
+    <div class="rlist reveal">
+      <div class="rl"><div class="rl-icon">🐍</div><div class="rl-name">Python</div><div class="rl-ver">3.10+</div><div class="rl-desc">Runtime for Prism — installer guides upgrade if needed</div><div class="rl-auto">Required</div></div>
+      <div class="rl"><div class="rl-icon">🖼</div><div class="rl-name">PyQt6</div><div class="rl-ver">Latest</div><div class="rl-desc">GUI framework powering the entire Prism interface</div><div class="rl-auto">Auto-install</div></div>
+      <div class="rl"><div class="rl-icon">📥</div><div class="rl-name">yt-dlp</div><div class="rl-ver">Latest</div><div class="rl-desc">Download engine — supports thousands of platforms</div><div class="rl-auto">Auto-install</div></div>
+      <div class="rl"><div class="rl-icon">🎨</div><div class="rl-name">Pillow</div><div class="rl-ver">Latest</div><div class="rl-desc">Image processing for thumbnails and format conversion</div><div class="rl-auto">Auto-install</div></div>
+      <div class="rl"><div class="rl-icon">🌐</div><div class="rl-name">requests</div><div class="rl-ver">Latest</div><div class="rl-desc">HTTP library for fetching thumbnails and media data</div><div class="rl-auto">Auto-install</div></div>
+      <div class="rl"><div class="rl-icon">🎞</div><div class="rl-name">FFmpeg</div><div class="rl-ver">5.0+</div><div class="rl-desc">Video/audio merging — auto-downloaded and added to PATH</div><div class="rl-auto">Auto-install</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="div z"></div>
+
+<footer class="z">
+  <div class="flogo"><div class="nlogo-dot"></div>Prism</div>
+  <div class="fmid">YOUTUBE MEDIA SUITE · V7.3<br>OPEN SOURCE · FREE FOREVER · 100% LOCAL</div>
+  <div class="flinks">
+    <a href="https://github.com/TheAayan0007/prism" target="_blank">GitHub</a>
+    <a href="https://github.com/TheAayan0007/prism/releases" target="_blank">Releases</a>
+    <a href="#install">Install</a>
+  </div>
+</footer>
+
+<script>
+/* cursor */
+const c=document.getElementById('c'),cr=document.getElementById('cr');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;c.style.left=mx+'px';c.style.top=my+'px';});
+(function loop(){rx+=(mx-rx)*.13;ry+=(my-ry)*.13;cr.style.left=rx+'px';cr.style.top=ry+'px';requestAnimationFrame(loop);})();
+
+/* grid */
+const cv=document.getElementById('gc'),ctx=cv.getContext('2d');
+let W,H,ox=0,oy=0;
+function rsz(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+rsz();addEventListener('resize',rsz);
+(function g(){
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,.03)';ctx.lineWidth=.5;
+  const S=52,tx=(-ox%S+S)%S,ty=(-oy%S+S)%S;
+  ctx.beginPath();
+  for(let x=tx-S;x<W+S;x+=S){ctx.moveTo(x,0);ctx.lineTo(x,H);}
+  for(let y=ty-S;y<H+S;y+=S){ctx.moveTo(0,y);ctx.lineTo(W,y);}
+  ctx.stroke();
+  const g1=ctx.createRadialGradient(W/2,0,0,W/2,0,W*.6);
+  g1.addColorStop(0,'rgba(217,0,32,.09)');g1.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g1;ctx.fillRect(0,0,W,H);
+  ox+=.18;oy+=.10;
+  requestAnimationFrame(g);
+})();
+
+/* nav scroll */
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('on',scrollY>30));
+
+/* reveal */
+const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');obs.unobserve(x.target);}});},{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+/* copy */
+function cp(btn,text){
+  navigator.clipboard.writeText(text).then(()=>{
+    const t=btn.textContent;btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent=t;btn.classList.remove('ok');},1800);
+  });
+}
+</script>
+</body>
+</html>
