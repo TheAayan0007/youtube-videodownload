@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prism — YouTube Media Suite v7.3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:       #06000a;
+  --bg2:      #0d000f;
+  --bg3:      #140010;
+  --bg4:      #1a001a;
+  --red:      #e8001a;
+  --red2:     #ff1f36;
+  --red3:     #ff5c6e;
+  --red-dim:  rgba(232,0,26,0.12);
+  --red-glow: rgba(232,0,26,0.35);
+  --txt:      #f5f0f5;
+  --txt2:     #9a8ea0;
+  --txt3:     #3a2840;
+  --border:   #1e0820;
+  --border2:  #2e0e30;
+  --white:    #ffffff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:'Outfit',sans-serif;
+  overflow-x:hidden;
+  cursor:none;
+}
+
+/* ── Custom cursor ── */
+#cursor{
+  position:fixed;width:12px;height:12px;
+  background:var(--red);border-radius:50%;
+  pointer-events:none;z-index:99999;
+  transform:translate(-50%,-50%);
+  transition:transform .12s ease,opacity .2s;
+  mix-blend-mode:screen;
+}
+#cursor-ring{
+  position:fixed;width:36px;height:36px;
+  border:1.5px solid rgba(232,0,26,0.5);
+  border-radius:50%;pointer-events:none;z-index:99998;
+  transform:translate(-50%,-50%);
+  transition:transform .22s ease,width .2s,height .2s,border-color .2s;
+}
+body:has(a:hover) #cursor-ring,
+body:has(button:hover) #cursor-ring{
+  width:52px;height:52px;
+  border-color:var(--red2);
+}
+
+/* ── Animated grid canvas ── */
+#grid-canvas{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;opacity:0.5;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--red);border-radius:2px;}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  padding:0 40px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(6,0,10,0.85);
+  backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--border);
+  transition:background .3s;
+}
+nav.scrolled{background:rgba(6,0,10,0.97);}
+.nav-logo{
+  display:flex;align-items:center;gap:10px;
+  font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
+  color:var(--txt);text-decoration:none;letter-spacing:-0.5px;
+}
+.nav-logo-dot{
+  width:10px;height:10px;background:var(--red);border-radius:50%;
+  box-shadow:0 0 10px var(--red),0 0 22px rgba(232,0,26,0.5);
+  animation:pulse-dot 2s infinite;
+}
+@keyframes pulse-dot{
+  0%,100%{box-shadow:0 0 10px var(--red),0 0 22px rgba(232,0,26,0.5);}
+  50%{box-shadow:0 0 18px var(--red2),0 0 36px rgba(255,31,54,0.7);}
+}
+.nav-links{display:flex;align-items:center;gap:4px;}
+.nav-links a{
+  color:var(--txt2);font-size:13px;font-weight:500;
+  text-decoration:none;padding:7px 14px;border-radius:8px;
+  transition:color .2s,background .2s;letter-spacing:.3px;
+}
+.nav-links a:hover{color:var(--txt);background:rgba(255,255,255,0.04);}
+.nav-cta{
+  background:var(--red);color:#fff;
+  padding:9px 20px;border-radius:10px;font-weight:600;
+  font-size:13px;text-decoration:none;letter-spacing:.3px;
+  transition:background .2s,box-shadow .2s;
+  box-shadow:0 0 20px rgba(232,0,26,0.3);
+}
+.nav-cta:hover{background:var(--red2);box-shadow:0 0 30px rgba(232,0,26,0.55);}
+
+/* ── HERO ── */
+#hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:120px 24px 80px;
+  position:relative;z-index:1;
+  text-align:center;
+  overflow:hidden;
+}
+.hero-glow-top{
+  position:absolute;top:-120px;left:50%;transform:translateX(-50%);
+  width:700px;height:500px;
+  background:radial-gradient(ellipse at 50% 20%,rgba(232,0,26,0.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero-glow-corner{
+  position:absolute;bottom:-80px;right:-80px;
+  width:500px;height:500px;
+  background:radial-gradient(ellipse at 80% 80%,rgba(180,0,100,0.14) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:7px 18px;border-radius:100px;
+  background:rgba(232,0,26,0.08);
+  border:1px solid rgba(232,0,26,0.25);
+  font-size:12px;font-weight:500;color:var(--red3);
+  letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:32px;
+  animation:fade-up .8s ease both;
+}
+.hero-badge-dot{
+  width:6px;height:6px;background:var(--red);border-radius:50%;
+  animation:pulse-dot 1.5s infinite;
+}
+.hero-title{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(54px,9vw,110px);
+  font-weight:800;
+  line-height:.92;
+  letter-spacing:-3px;
+  margin-bottom:28px;
+  animation:fade-up .8s .1s ease both;
+}
+.hero-title span{
+  display:block;
+  background:linear-gradient(135deg,#ff1f36 0%,#ff8090 50%,#ff1f36 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;background-size:200%;
+  animation:shimmer 4s linear infinite;
+}
+@keyframes shimmer{to{background-position:200% 0;}}
+.hero-sub{
+  font-size:clamp(15px,2vw,20px);color:var(--txt2);max-width:560px;
+  line-height:1.65;margin:0 auto 44px;font-weight:300;
+  animation:fade-up .8s .2s ease both;
+}
+.hero-sub strong{color:var(--txt);font-weight:500;}
+.hero-btns{
+  display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
+  animation:fade-up .8s .3s ease both;
+}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--red);color:#fff;
+  padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;
+  text-decoration:none;letter-spacing:.3px;
+  box-shadow:0 0 40px rgba(232,0,26,0.4),0 8px 32px rgba(0,0,0,0.4);
+  transition:background .2s,box-shadow .2s,transform .15s;
+}
+.btn-primary:hover{
+  background:var(--red2);transform:translateY(-2px);
+  box-shadow:0 0 55px rgba(232,0,26,0.6),0 12px 40px rgba(0,0,0,0.5);
+}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--border2);
+  color:var(--txt);padding:14px 28px;border-radius:12px;
+  font-weight:500;font-size:15px;text-decoration:none;
+  transition:background .2s,border-color .2s,transform .15s;
+}
+.btn-secondary:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.15);transform:translateY(-2px);}
+.hero-stats{
+  display:flex;gap:40px;justify-content:center;flex-wrap:wrap;
+  margin-top:70px;padding-top:48px;
+  border-top:1px solid var(--border);
+  animation:fade-up .8s .4s ease both;
+  width:100%;max-width:600px;
+}
+.stat{text-align:center;}
+.stat-n{
+  font-family:'Space Mono',monospace;
+  font-size:32px;font-weight:700;color:var(--red2);
+  display:block;line-height:1.1;
+}
+.stat-l{font-size:11px;color:var(--txt3);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+
+/* ── APP PREVIEW MOCKUP ── */
+#mockup-section{
+  position:relative;z-index:1;
+  padding:0 24px 120px;
+  display:flex;justify-content:center;
+}
+.app-frame{
+  width:100%;max-width:980px;
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 0 80px rgba(232,0,26,0.12),0 40px 120px rgba(0,0,0,0.7);
+  animation:fade-up .8s .5s ease both;
+}
+.app-topbar{
+  background:rgba(6,0,10,0.97);
+  border-bottom:1px solid var(--border);
+  height:48px;display:flex;align-items:center;
+  padding:0 20px;gap:8px;
+}
+.app-dot{width:12px;height:12px;border-radius:50%;}
+.app-dot.r{background:#ff5f57;}
+.app-dot.y{background:#febc2e;}
+.app-dot.g{background:#28c840;}
+.app-topbar-logo{
+  margin-left:16px;font-family:'Syne',sans-serif;
+  font-size:14px;font-weight:700;color:var(--txt);
+}
+.app-topbar-nav{
+  margin-left:auto;display:flex;gap:6px;
+}
+.app-nav-pill{
+  padding:5px 14px;border-radius:7px;font-size:12px;font-weight:500;
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--txt2);
+}
+.app-nav-pill.active{
+  background:rgba(232,0,26,0.15);border-color:rgba(232,0,26,0.4);color:var(--red3);
+}
+.app-body{
+  padding:40px 36px;
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;
+}
+.app-search-area{grid-column:1/-1;}
+.app-search-box{
+  background:var(--bg3);border:1.5px solid var(--border2);
+  border-radius:14px;padding:16px 20px;
+  display:flex;align-items:center;gap:12px;
+}
+.app-search-icon{font-size:18px;opacity:.5;}
+.app-search-input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--txt);font-size:15px;font-family:'Outfit',sans-serif;
+}
+.app-search-input::placeholder{color:var(--txt3);}
+.app-fetch-btn{
+  background:var(--red);color:#fff;border:none;border-radius:10px;
+  padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;
+  font-family:'Outfit',sans-serif;
+}
+.app-video-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;
+}
+.app-thumb-placeholder{
+  width:100%;height:120px;
+  background:linear-gradient(135deg,#0d000f,#1a0020);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;opacity:.5;
+}
+.app-card-body{padding:14px;}
+.app-card-ch{font-size:10px;color:var(--red3);letter-spacing:2px;font-weight:600;margin-bottom:4px;}
+.app-card-title{font-size:13px;font-weight:600;color:var(--txt);line-height:1.4;margin-bottom:10px;}
+.app-card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.app-tag{
+  font-size:10px;padding:3px 10px;border-radius:20px;
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--txt2);
+}
+.app-tag.hi{background:rgba(232,0,26,0.08);border-color:rgba(232,0,26,0.25);color:var(--red3);}
+.app-dl-btn{
+  width:100%;background:var(--red);border:none;border-radius:9px;
+  color:#fff;padding:10px;font-size:12px;font-weight:700;
+  cursor:pointer;font-family:'Outfit',sans-serif;
+}
+.app-progress-row{
+  height:4px;background:var(--bg4);border-radius:2px;margin-bottom:12px;overflow:hidden;
+}
+.app-progress-fill{
+  height:100%;width:67%;
+  background:linear-gradient(90deg,#cc0014,var(--red2));border-radius:2px;
+  position:relative;overflow:hidden;
+}
+.app-progress-fill::after{
+  content:'';position:absolute;top:0;right:0;bottom:0;width:20px;
+  background:rgba(255,255,255,0.4);animation:progress-glow 1.5s infinite;
+}
+@keyframes progress-glow{
+  0%{opacity:0;}50%{opacity:1;}100%{opacity:0;}
+}
+
+/* ── SECTIONS ── */
+.section{
+  position:relative;z-index:1;
+  padding:100px 24px;max-width:1200px;
+  margin:0 auto;
+}
+.section-label{
+  font-family:'Space Mono',monospace;
+  font-size:11px;letter-spacing:3px;color:var(--red3);
+  text-transform:uppercase;margin-bottom:16px;
+  display:flex;align-items:center;gap:12px;
+}
+.section-label::before{
+  content:'';width:32px;height:1px;background:var(--red);
+}
+.section-title{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(36px,5vw,58px);
+  font-weight:800;letter-spacing:-2px;
+  line-height:1.0;margin-bottom:16px;
+}
+.section-sub{
+  font-size:17px;color:var(--txt2);max-width:520px;
+  line-height:1.65;font-weight:300;
+}
+
+/* ── FEATURES GRID ── */
+#features .features-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:20px;overflow:hidden;
+  margin-top:64px;
+}
+.feat-card{
+  background:var(--bg);
+  padding:36px 32px;
+  position:relative;overflow:hidden;
+  transition:background .3s;
+}
+.feat-card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--red),transparent);
+  transform:scaleX(0);transition:transform .4s ease;
+}
+.feat-card:hover{background:var(--bg2);}
+.feat-card:hover::before{transform:scaleX(1);}
+.feat-icon{
+  font-size:28px;margin-bottom:20px;
+  display:block;line-height:1;
+}
+.feat-title{
+  font-family:'Syne',sans-serif;font-size:18px;font-weight:700;
+  color:var(--txt);margin-bottom:10px;letter-spacing:-.3px;
+}
+.feat-desc{font-size:14px;color:var(--txt2);line-height:1.65;}
+.feat-chip{
+  display:inline-block;margin-top:14px;
+  padding:4px 12px;border-radius:100px;
+  background:rgba(232,0,26,0.08);border:1px solid rgba(232,0,26,0.2);
+  font-size:11px;color:var(--red3);letter-spacing:1.5px;text-transform:uppercase;
+  font-family:'Space Mono',monospace;
+}
+
+/* ── TABS FEATURE SECTION ── */
+#how-it-works{
+  position:relative;z-index:1;
+  padding:100px 24px;
+  background:linear-gradient(180deg,transparent 0%,rgba(14,0,14,0.6) 50%,transparent 100%);
+}
+.hiw-inner{max-width:1200px;margin:0 auto;}
+.hiw-tabs{
+  display:flex;gap:4px;margin-top:56px;margin-bottom:32px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:6px;overflow-x:auto;
+}
+.hiw-tab{
+  flex:1;min-width:130px;
+  padding:10px 20px;border-radius:10px;
+  font-size:13px;font-weight:600;color:var(--txt2);
+  cursor:pointer;transition:all .25s;text-align:center;
+  white-space:nowrap;border:none;background:transparent;
+  font-family:'Outfit',sans-serif;
+}
+.hiw-tab.active{
+  background:rgba(232,0,26,0.15);border:1px solid rgba(232,0,26,0.35);
+  color:var(--red3);
+}
+.hiw-tab:hover:not(.active){color:var(--txt);background:rgba(255,255,255,0.04);}
+.hiw-panels{}
+.hiw-panel{display:none;animation:fade-up .4s ease;}
+.hiw-panel.active{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}
+@media(max-width:768px){.hiw-panel.active{grid-template-columns:1fr;}}
+.hiw-steps{display:flex;flex-direction:column;gap:24px;}
+.hiw-step{
+  display:flex;gap:20px;
+  padding:24px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;transition:border-color .2s;
+}
+.hiw-step:hover{border-color:rgba(232,0,26,0.25);}
+.hiw-step-num{
+  font-family:'Space Mono',monospace;font-size:11px;font-weight:700;
+  color:var(--red);background:rgba(232,0,26,0.1);
+  border:1px solid rgba(232,0,26,0.25);
+  border-radius:8px;padding:6px 10px;min-width:40px;height:36px;
+  display:flex;align-items:center;justify-content:center;letter-spacing:1px;
+}
+.hiw-step-content{}
+.hiw-step-title{font-weight:700;font-size:15px;color:var(--txt);margin-bottom:6px;}
+.hiw-step-desc{font-size:13px;color:var(--txt2);line-height:1.6;}
+.hiw-visual{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:16px;padding:28px;overflow:hidden;position:relative;
+}
+.hiw-visual::before{
+  content:'';position:absolute;top:-60px;right:-60px;
+  width:200px;height:200px;
+  background:radial-gradient(circle,rgba(232,0,26,0.1) 0%,transparent 70%);
+}
+.code-block{
+  background:rgba(0,0,0,0.4);border:1px solid var(--border);
+  border-radius:10px;padding:18px 20px;
+  font-family:'Space Mono',monospace;font-size:12px;
+  color:#b0a0b8;line-height:1.7;
+}
+.code-line{display:flex;gap:12px;}
+.code-num{color:var(--txt3);min-width:24px;text-align:right;user-select:none;}
+.code-str{color:#ff8090;}
+.code-kw{color:var(--red2);}
+.code-fn{color:#c0a0ff;}
+.code-cm{color:#504060;}
+
+/* ── REQUIREMENTS ── */
+#requirements{
+  position:relative;z-index:1;
+  padding:0 24px 100px;
+}
+.req-inner{max-width:1200px;margin:0 auto;}
+.req-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;
+  margin-top:56px;
+}
+.req-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:28px 24px;
+  display:flex;flex-direction:column;gap:12px;
+  transition:border-color .2s,background .2s;position:relative;overflow:hidden;
+}
+.req-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--red),transparent);
+  transform:scaleX(0);transform-origin:left;transition:transform .3s;
+}
+.req-card:hover{border-color:var(--border2);background:var(--bg3);}
+.req-card:hover::after{transform:scaleX(1);}
+.req-icon{font-size:28px;}
+.req-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--txt);}
+.req-ver{font-family:'Space Mono',monospace;font-size:11px;color:var(--red3);letter-spacing:1px;}
+.req-desc{font-size:13px;color:var(--txt2);line-height:1.6;}
+
+/* ── INSTALL ── */
+#install{
+  position:relative;z-index:1;
+  padding:0 24px 100px;
+}
+.install-inner{
+  max-width:800px;margin:0 auto;
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:20px;overflow:hidden;
+  box-shadow:0 0 60px rgba(232,0,26,0.06);
+}
+.install-header{
+  background:rgba(232,0,26,0.06);border-bottom:1px solid var(--border);
+  padding:20px 28px;display:flex;align-items:center;gap:12px;
+}
+.install-terminal-dots{display:flex;gap:7px;}
+.install-terminal-dot{
+  width:12px;height:12px;border-radius:50%;
+}
+.install-terminal-dot:nth-child(1){background:#ff5f57;}
+.install-terminal-dot:nth-child(2){background:#febc2e;}
+.install-terminal-dot:nth-child(3){background:#28c840;}
+.install-title{font-family:'Space Mono',monospace;font-size:12px;color:var(--txt3);margin-left:8px;}
+.install-body{padding:28px;}
+.install-step{margin-bottom:24px;}
+.install-step-label{
+  font-size:11px;letter-spacing:2px;color:var(--txt3);text-transform:uppercase;
+  font-family:'Space Mono',monospace;margin-bottom:10px;
+}
+.install-cmd{
+  background:rgba(0,0,0,0.5);border:1px solid var(--border);
+  border-radius:10px;padding:14px 18px;
+  font-family:'Space Mono',monospace;font-size:13px;
+  color:#4ade80;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;
+}
+.install-cmd span.prompt{color:var(--red3);margin-right:8px;}
+.copy-btn{
+  background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  color:var(--txt2);font-size:11px;padding:5px 12px;border-radius:7px;
+  cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif;
+  min-width:64px;text-align:center;
+}
+.copy-btn:hover{background:rgba(255,255,255,0.1);color:var(--txt);}
+.copy-btn.copied{color:#4ade80;border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.06);}
+
+/* ── PRIVACY / CALLOUT BANNER ── */
+#privacy{
+  position:relative;z-index:1;
+  padding:0 24px 100px;
+}
+.privacy-banner{
+  max-width:1200px;margin:0 auto;
+  background:var(--red-dim);
+  border:1px solid rgba(232,0,26,0.2);
+  border-radius:20px;padding:56px 64px;
+  display:flex;gap:64px;align-items:center;
+  position:relative;overflow:hidden;
+}
+.privacy-banner::before{
+  content:'PRISM';
+  position:absolute;right:-20px;bottom:-40px;
+  font-family:'Syne',sans-serif;font-size:180px;font-weight:800;
+  color:rgba(232,0,26,0.04);pointer-events:none;letter-spacing:-8px;
+  line-height:1;
+}
+.privacy-left{flex:1;}
+.privacy-left h2{
+  font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,44px);
+  font-weight:800;letter-spacing:-1.5px;margin-bottom:12px;
+}
+.privacy-left p{font-size:16px;color:var(--txt2);line-height:1.65;max-width:440px;}
+.privacy-right{
+  display:flex;flex-direction:column;gap:16px;min-width:240px;
+}
+.privacy-item{
+  display:flex;align-items:flex-start;gap:14px;
+}
+.privacy-item-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:rgba(232,0,26,0.12);border:1px solid rgba(232,0,26,0.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.privacy-item-text strong{display:block;font-size:14px;color:var(--txt);margin-bottom:2px;}
+.privacy-item-text span{font-size:12px;color:var(--txt2);}
+
+/* ── ABOUT CARD ── */
+#about{
+  position:relative;z-index:1;
+  padding:0 24px 100px;
+}
+.about-inner{max-width:800px;margin:0 auto;text-align:center;}
+.about-inner .section-label{justify-content:center;}
+.about-inner .section-label::before{display:none;}
+.about-inner .section-title{text-align:center;margin-bottom:20px;}
+.about-inner .section-sub{max-width:560px;margin:0 auto 44px;text-align:center;}
+.about-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+/* ── FOOTER ── */
+footer{
+  position:relative;z-index:1;
+  border-top:1px solid var(--border);
+  padding:48px 40px;
+  display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;gap:24px;
+  background:rgba(6,0,10,0.97);
+}
+.footer-logo{
+  font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
+  color:var(--txt);display:flex;align-items:center;gap:8px;
+}
+.footer-center{
+  text-align:center;
+  font-size:12px;color:var(--txt3);line-height:1.7;
+  font-family:'Space Mono',monospace;
+}
+.footer-links{
+  display:flex;gap:16px;justify-content:flex-end;flex-wrap:wrap;
+}
+.footer-links a{
+  font-size:13px;color:var(--txt2);text-decoration:none;
+  transition:color .2s;
+}
+.footer-links a:hover{color:var(--red2);}
+
+/* ── ANIMATIONS ── */
+@keyframes fade-up{
+  from{opacity:0;transform:translateY(28px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.reveal{
+  opacity:0;transform:translateY(32px);
+  transition:opacity .7s ease,transform .7s ease;
+}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  nav{padding:0 20px;}
+  .nav-links{display:none;}
+  .hero-stats{gap:24px;}
+  .app-body{grid-template-columns:1fr;}
+  .privacy-banner{flex-direction:column;padding:36px 28px;gap:32px;}
+  .privacy-banner::before{display:none;}
+  footer{grid-template-columns:1fr;text-align:center;}
+  .footer-links{justify-content:center;}
+}
+@media(max-width:600px){
+  .hero-btns{flex-direction:column;align-items:center;}
+  .install-body{padding:18px;}
+  .section-title{letter-spacing:-1px;}
+}
+
+/* ── SECTION DIVIDER ── */
+.divider{
+  position:relative;z-index:1;
+  height:1px;background:var(--border);
+  max-width:1200px;margin:0 auto;
+}
+.divider::after{
+  content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:6px;height:6px;background:var(--red);border-radius:50%;
+  box-shadow:0 0 12px var(--red);
+}
+
+/* ── FLOATING TAGS ── */
+.floating-tag{
+  position:absolute;padding:8px 16px;border-radius:100px;
+  background:rgba(6,0,10,0.9);border:1px solid var(--border2);
+  font-size:12px;font-weight:600;color:var(--txt2);
+  display:flex;align-items:center;gap:7px;white-space:nowrap;
+  animation:float 6s ease-in-out infinite;
+  pointer-events:none;
+}
+.floating-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--red);}
+@keyframes float{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-12px);}
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="grid-canvas"></canvas>
+
+<!-- ── NAV ── -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-dot"></div>
+    Prism
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How it works</a>
+    <a href="#requirements">Requirements</a>
+    <a href="#install">Install</a>
+    <a href="#about">About</a>
+  </div>
+  <a href="#install" class="nav-cta">Get Prism ↗</a>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <div class="hero-glow-top"></div>
+  <div class="hero-glow-corner"></div>
+
+  <!-- Floating tags -->
+  <div class="floating-tag" style="top:18%;left:6%;animation-delay:0s;">
+    <div class="dot"></div>Video + Audio
+  </div>
+  <div class="floating-tag" style="top:22%;right:7%;animation-delay:1.5s;">
+    <div class="dot"></div>Playlist Mode
+  </div>
+  <div class="floating-tag" style="top:70%;left:4%;animation-delay:3s;">
+    <div class="dot"></div>Thumbnail Extractor
+  </div>
+  <div class="floating-tag" style="top:66%;right:5%;animation-delay:0.8s;">
+    <div class="dot"></div>60fps Support
+  </div>
+
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    YouTube Media Suite &nbsp;·&nbsp; v7.3
+  </div>
+
+  <h1 class="hero-title">
+    Download<br>
+    <span>Everything.</span>
+  </h1>
+
+  <p class="hero-sub">
+    <strong>Prism</strong> is a premium desktop app to download YouTube videos,
+    audio, playlists, and thumbnails — with stunning UI, real-time progress,
+    and zero compromise on quality.
+  </p>
+
+  <div class="hero-btns">
+    <a href="#install" class="btn-primary">↓&nbsp; Download Prism &nbsp;<span style="opacity:.6;font-size:12px;">Free</span></a>
+    <a href="#features" class="btn-secondary">Explore Features →</a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat">
+      <span class="stat-n">4K</span>
+      <div class="stat-l">Max Resolution</div>
+    </div>
+    <div class="stat">
+      <span class="stat-n">60fps</span>
+      <div class="stat-l">Frame Rate</div>
+    </div>
+    <div class="stat">
+      <span class="stat-n">∞</span>
+      <div class="stat-l">Playlist Size</div>
+    </div>
+    <div class="stat">
+      <span class="stat-n">3</span>
+      <div class="stat-l">Platforms</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── APP MOCKUP ── -->
+<div id="mockup-section" class="reveal">
+  <div class="app-frame">
+    <div class="app-topbar">
+      <div class="app-dot r"></div>
+      <div class="app-dot y"></div>
+      <div class="app-dot g"></div>
+      <div class="app-topbar-logo">▶ Prism — YouTube Media Suite</div>
+      <div class="app-topbar-nav">
+        <div class="app-nav-pill active">Download</div>
+        <div class="app-nav-pill">Playlist</div>
+        <div class="app-nav-pill">Thumbnail</div>
+        <div class="app-nav-pill">History</div>
+      </div>
+    </div>
+    <div class="app-body">
+      <div class="app-search-area">
+        <div class="app-search-box">
+          <span class="app-search-icon">🔗</span>
+          <input class="app-search-input" placeholder="Paste a YouTube link — e.g. https://youtube.com/watch?v=..." readonly>
+          <button class="app-fetch-btn">Fetch  ↗</button>
+        </div>
+      </div>
+      <div class="app-video-card">
+        <div class="app-thumb-placeholder">▶</div>
+        <div class="app-card-body">
+          <div class="app-card-ch">LOFI GIRL</div>
+          <div class="app-card-title">lofi hip hop radio 📚 – beats to relax/study to</div>
+          <div class="app-card-tags">
+            <span class="app-tag hi">1.2B views</span>
+            <span class="app-tag">24:00:00</span>
+            <span class="app-tag">~2.1 GB</span>
+          </div>
+          <div class="app-progress-row"><div class="app-progress-fill"></div></div>
+          <button class="app-dl-btn">↓  Downloading… 67%</button>
+        </div>
+      </div>
+      <div class="app-video-card">
+        <div class="app-thumb-placeholder">🎵</div>
+        <div class="app-card-body">
+          <div class="app-card-ch">RICK ASTLEY</div>
+          <div class="app-card-title">Never Gonna Give You Up (Official Music Video)</div>
+          <div class="app-card-tags">
+            <span class="app-tag hi">1.5B views</span>
+            <span class="app-tag">3:33</span>
+            <span class="app-tag">~180 MB</span>
+          </div>
+          <button class="app-dl-btn" style="background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);">✓  Saved to Downloads</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── FEATURES ── -->
+<section id="features" class="section reveal">
+  <div class="section-label">Core Features</div>
+  <h2 class="section-title">Everything you need,<br>nothing you don't.</h2>
+  <p class="section-sub">
+    Six powerful modes. One beautiful app. Download exactly what you want, how you want it.
+  </p>
+
+  <div class="features-grid">
+
+    <div class="feat-card">
+      <span class="feat-icon">🎬</span>
+      <div class="feat-title">Video Downloader</div>
+      <div class="feat-desc">Paste any YouTube URL and instantly fetch video metadata, thumbnail, view count, duration and size estimates. Download in any available quality.</div>
+      <span class="feat-chip">Core Feature</span>
+    </div>
+
+    <div class="feat-card">
+      <span class="feat-icon">🎵</span>
+      <div class="feat-title">Audio Extraction</div>
+      <div class="feat-desc">Download audio-only streams in the best available bitrate with language selection. Perfect for podcasts, music, lectures and more.</div>
+      <span class="feat-chip">Audio Only</span>
+    </div>
+
+    <div class="feat-card">
+      <span class="feat-icon">📋</span>
+      <div class="feat-title">Playlist Downloader</div>
+      <div class="feat-desc">Load entire YouTube playlists and batch-download selected videos with per-video quality controls, real-time queue progress and stop/resume.</div>
+      <span class="feat-chip">Batch Mode</span>
+    </div>
+
+    <div class="feat-card">
+      <span class="feat-icon">🖼</span>
+      <div class="feat-title">Thumbnail Extractor</div>
+      <div class="feat-desc">Download the highest-resolution thumbnail from any video in JPG or PNG format at full native resolution. No cropping, no compression.</div>
+      <span class="feat-chip">JPG / PNG</span>
+    </div>
+
+    <div class="feat-card">
+      <span class="feat-icon">📊</span>
+      <div class="feat-title">Download History</div>
+      <div class="feat-desc">Every download is logged with title, channel, duration, save path and date. Browse, search, and clear your history at any time. Persists between sessions.</div>
+      <span class="feat-chip">Persistent</span>
+    </div>
+
+    <div class="feat-card">
+      <span class="feat-icon">⚡</span>
+      <div class="feat-title">Real-time Progress</div>
+      <div class="feat-desc">Live download speed, percentage, and animated progress bars per video and overall in batch mode. See exactly what's happening at every moment.</div>
+      <span class="feat-chip">Live Stats</span>
+    </div>
+
+    <div class="feat-card">
+      <span class="feat-icon">🎛</span>
+      <div class="feat-title">Format Selection</div>
+      <div class="feat-desc">Choose from Video + Audio, Audio Only, or Video Only. Fine-tune quality (4K→360p), frame rate, and language track from smart dropdowns.</div>
+      <span class="feat-chip">Full Control</span>
+    </div>
+
+    <div class="feat-card">
+      <span class="feat-icon">🎨</span>
+      <div class="feat-title">Customisable UI</div>
+      <div class="feat-desc">Animated grid background, cursor glow, top/corner glow colours, and nav bar position (top or bottom) — all fully customisable in Settings.</div>
+      <span class="feat-chip">Personalise</span>
+    </div>
+
+    <div class="feat-card">
+      <span class="feat-icon">🖥</span>
+      <div class="feat-title">Cross-Platform</div>
+      <div class="feat-desc">Runs on Windows, macOS and Linux. The installer auto-detects your OS and sets up FFmpeg, pip packages and PATH entries automatically.</div>
+      <span class="feat-chip">Win · Mac · Linux</span>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── HOW IT WORKS ── -->
+<section id="how-it-works">
+  <div class="hiw-inner">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Three modes.<br>Infinite use cases.</h2>
+
+    <div class="hiw-tabs">
+      <button class="hiw-tab active" onclick="switchTab('video',this)">🎬 Video Download</button>
+      <button class="hiw-tab" onclick="switchTab('playlist',this)">📋 Playlist Batch</button>
+      <button class="hiw-tab" onclick="switchTab('thumbnail',this)">🖼 Thumbnail</button>
+      <button class="hiw-tab" onclick="switchTab('install',this)">⚙️ Auto Install</button>
+    </div>
+
+    <!-- Video panel -->
+    <div class="hiw-panel active" id="panel-video">
+      <div class="hiw-steps">
+        <div class="hiw-step">
+          <div class="hiw-step-num">01</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Paste any YouTube URL</div>
+            <div class="hiw-step-desc">Paste a full URL, short youtu.be link, or a video with timestamps. Prism normalises everything automatically.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">02</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Fetch video metadata</div>
+            <div class="hiw-step-desc">Click Fetch to pull title, channel, views, likes, duration, available formats and the highest-resolution thumbnail.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">03</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Choose your format &amp; quality</div>
+            <div class="hiw-step-desc">Select Video+Audio, Audio Only or Video Only. Fine-tune quality from 4K to 360p and choose your language track.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">04</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Download &amp; save</div>
+            <div class="hiw-step-desc">Click Download, pick a folder and watch real-time speed + percentage. Files are saved as MP4 via FFmpeg merging.</div>
+          </div>
+        </div>
+      </div>
+      <div class="hiw-visual">
+        <div class="section-label" style="margin-bottom:12px;">Output example</div>
+        <div class="code-block">
+          <div class="code-line"><span class="code-num">1</span><span>[Prism] Fetched: <span class="code-str">Never Gonna Give You Up</span></span></div>
+          <div class="code-line"><span class="code-num">2</span><span class="code-cm"># Format: bestvideo+bestaudio/best</span></div>
+          <div class="code-line"><span class="code-num">3</span><span>[Prism] <span class="code-kw">Downloading</span> stream 1/2…</span></div>
+          <div class="code-line"><span class="code-num">4</span><span>  Speed: <span class="code-fn">12.4 MB/s</span>  · 67%</span></div>
+          <div class="code-line"><span class="code-num">5</span><span>[Prism] <span class="code-kw">Merging</span> &amp; encoding…</span></div>
+          <div class="code-line"><span class="code-num">6</span><span class="code-str">[Prism] Done: Never Gonna Give You Up.mp4</span></div>
+          <div class="code-line"><span class="code-num">7</span><span>[Prism] Saved to history ✓</span></div>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--txt2);background:var(--bg3);padding:8px 14px;border-radius:8px;border:1px solid var(--border);">📁 MP4 container</span>
+          <span style="font-size:12px;color:var(--txt2);background:var(--bg3);padding:8px 14px;border-radius:8px;border:1px solid var(--border);">🔊 AAC/Opus audio</span>
+          <span style="font-size:12px;color:var(--txt2);background:var(--bg3);padding:8px 14px;border-radius:8px;border:1px solid var(--border);">🎥 H.264/VP9 video</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Playlist panel -->
+    <div class="hiw-panel" id="panel-playlist">
+      <div class="hiw-steps">
+        <div class="hiw-step">
+          <div class="hiw-step-num">01</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Paste a playlist URL</div>
+            <div class="hiw-step-desc">Any YouTube playlist URL works. Prism loads all entries with metadata, thumbnails, duration, views and size estimates.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">02</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Select videos to download</div>
+            <div class="hiw-step-desc">Use checkboxes to pick individual videos or use "Select All / Deselect All". Each row has per-video quality and audio selectors.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">03</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Batch download with queue</div>
+            <div class="hiw-step-desc">Downloads run one-by-one. Track current video speed + progress and overall batch completion. Stop the queue any time.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">04</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">All saved to history</div>
+            <div class="hiw-step-desc">Every successful download is logged automatically. See total, loaded, selected and done counters update in real time.</div>
+          </div>
+        </div>
+      </div>
+      <div class="hiw-visual">
+        <div class="section-label" style="margin-bottom:16px;">Batch stats panel</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-family:'Space Mono',monospace;font-size:26px;font-weight:700;color:var(--red2);">24</div>
+            <div style="font-size:10px;letter-spacing:1.5px;color:var(--txt3);margin-top:4px;">TOTAL</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-family:'Space Mono',monospace;font-size:26px;font-weight:700;color:var(--txt);">18</div>
+            <div style="font-size:10px;letter-spacing:1.5px;color:var(--txt3);margin-top:4px;">LOADED</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-family:'Space Mono',monospace;font-size:26px;font-weight:700;color:var(--txt);">12</div>
+            <div style="font-size:10px;letter-spacing:1.5px;color:var(--txt3);margin-top:4px;">SELECTED</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-family:'Space Mono',monospace;font-size:26px;font-weight:700;color:#4ade80;">7</div>
+            <div style="font-size:10px;letter-spacing:1.5px;color:var(--txt3);margin-top:4px;">DONE</div>
+          </div>
+        </div>
+        <div class="app-progress-row" style="height:6px;margin-bottom:8px;"><div class="app-progress-fill" style="width:58%;"></div></div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--txt2);">7 / 12 videos complete &nbsp;·&nbsp; 9.3 MB/s</div>
+      </div>
+    </div>
+
+    <!-- Thumbnail panel -->
+    <div class="hiw-panel" id="panel-thumbnail">
+      <div class="hiw-steps">
+        <div class="hiw-step">
+          <div class="hiw-step-num">01</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Paste a video URL</div>
+            <div class="hiw-step-desc">Any YouTube video URL — long form or short. Prism finds the highest-resolution thumbnail automatically from all available sizes.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">02</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Preview at full resolution</div>
+            <div class="hiw-step-desc">The thumbnail is displayed in a large preview card with exact pixel dimensions shown as a badge.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">03</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Save as JPG or PNG</div>
+            <div class="hiw-step-desc">Choose your format and save path. Pillow handles the conversion with full quality — no resampling or downscaling.</div>
+          </div>
+        </div>
+      </div>
+      <div class="hiw-visual">
+        <div class="section-label" style="margin-bottom:14px;">Resolution badge</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#0d000f,#1a0020);height:130px;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:.5;">▶</div>
+          <div style="padding:16px;display:flex;align-items:center;gap:12px;">
+            <div style="flex:1;font-size:13px;font-weight:600;color:var(--txt);">Video Title Here</div>
+            <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--txt2);background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:6px;padding:4px 10px;">1280 × 720 · JPEG</div>
+          </div>
+          <div style="padding:0 16px 16px;display:flex;gap:8px;">
+            <button style="flex:1;background:var(--red);color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;">↓  JPG</button>
+            <button style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--txt2);border-radius:8px;padding:9px;font-size:12px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;">↓  PNG</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Install panel -->
+    <div class="hiw-panel" id="panel-install">
+      <div class="hiw-steps">
+        <div class="hiw-step">
+          <div class="hiw-step-num">01</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Run the installer</div>
+            <div class="hiw-step-desc">One script handles everything. It checks your Python version, installs pip if missing, and installs all required packages.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">02</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">FFmpeg auto-setup</div>
+            <div class="hiw-step-desc">On Windows it downloads from gyan.dev and adds to PATH. On macOS it runs Homebrew. On Linux it uses apt/dnf/pacman automatically.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">03</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">All requirements verified</div>
+            <div class="hiw-step-desc">The installer finishes with a full check: Python ✔ · pip ✔ · PyQt6 ✔ · yt-dlp ✔ · Pillow ✔ · requests ✔ · FFmpeg ✔</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-step-num">04</div>
+          <div class="hiw-step-content">
+            <div class="hiw-step-title">Launch Prism</div>
+            <div class="hiw-step-desc">Run <code style="color:var(--red3);font-family:'Space Mono',monospace;">python prism.py</code> — and the cinematic splash screen greets you before the main UI appears.</div>
+          </div>
+        </div>
+      </div>
+      <div class="hiw-visual">
+        <div class="section-label" style="margin-bottom:14px;">Installer output</div>
+        <div class="code-block">
+          <div class="code-line" style="color:#4ade80;"><span class="code-num"> </span>  ✔  Python 3.12 — OK</div>
+          <div class="code-line" style="color:#4ade80;"><span class="code-num"> </span>  ✔  pip found — 24.0</div>
+          <div class="code-line" style="color:#4ade80;"><span class="code-num"> </span>  ✔  PyQt6 — installed</div>
+          <div class="code-line" style="color:#4ade80;"><span class="code-num"> </span>  ✔  yt-dlp — installed</div>
+          <div class="code-line" style="color:#4ade80;"><span class="code-num"> </span>  ✔  Pillow — installed</div>
+          <div class="code-line" style="color:#4ade80;"><span class="code-num"> </span>  ✔  requests — installed</div>
+          <div class="code-line" style="color:var(--red3);"><span class="code-num"> </span>  ▶  Checking FFmpeg…</div>
+          <div class="code-line" style="color:#4ade80;"><span class="code-num"> </span>  ✔  FFmpeg — version 7.1</div>
+          <div class="code-line" style="color:#4ade80;margin-top:8px;font-weight:700;"><span class="code-num"> </span>  ✔  All requirements satisfied!</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── REQUIREMENTS ── -->
+<section id="requirements" class="reveal">
+  <div class="req-inner">
+    <div class="section-label">System Requirements</div>
+    <h2 class="section-title">What you need<br>to run Prism.</h2>
+    <p class="section-sub">The installer handles everything automatically — this is just for reference.</p>
+
+    <div class="req-grid">
+      <div class="req-card">
+        <div class="req-icon">🐍</div>
+        <div class="req-name">Python</div>
+        <div class="req-ver">3.10 or higher</div>
+        <div class="req-desc">The runtime for Prism. The installer will guide you through upgrading if your version is older.</div>
+      </div>
+      <div class="req-card">
+        <div class="req-icon">🪟</div>
+        <div class="req-name">PyQt6</div>
+        <div class="req-ver">Latest</div>
+        <div class="req-desc">The GUI framework powering the entire Prism interface. Installed automatically via pip.</div>
+      </div>
+      <div class="req-card">
+        <div class="req-icon">📥</div>
+        <div class="req-name">yt-dlp</div>
+        <div class="req-ver">Latest</div>
+        <div class="req-desc">The powerful download engine behind Prism — supports thousands of sites beyond YouTube.</div>
+      </div>
+      <div class="req-card">
+        <div class="req-icon">🖼</div>
+        <div class="req-name">Pillow</div>
+        <div class="req-ver">Latest</div>
+        <div class="req-desc">Image processing for thumbnails, format conversion (JPG/PNG) and display within the app.</div>
+      </div>
+      <div class="req-card">
+        <div class="req-icon">🌐</div>
+        <div class="req-name">requests</div>
+        <div class="req-ver">Latest</div>
+        <div class="req-desc">HTTP library used to fetch thumbnails and media data from remote URLs efficiently.</div>
+      </div>
+      <div class="req-card">
+        <div class="req-icon">🎞</div>
+        <div class="req-name">FFmpeg</div>
+        <div class="req-ver">5.0+</div>
+        <div class="req-desc">Video/audio merging and container conversion. Auto-installed for all platforms by the setup script.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── INSTALL ── -->
+<section id="install" style="position:relative;z-index:1;padding:100px 24px;" class="reveal">
+  <div style="max-width:1200px;margin:0 auto;">
+    <div class="section-label">Quick Install</div>
+    <h2 class="section-title" style="margin-bottom:16px;">Up and running<br>in 30 seconds.</h2>
+    <p class="section-sub" style="margin-bottom:56px;">Two commands. That's it.</p>
+  </div>
+
+  <div class="install-inner">
+    <div class="install-header">
+      <div class="install-terminal-dots">
+        <div class="install-terminal-dot"></div>
+        <div class="install-terminal-dot"></div>
+        <div class="install-terminal-dot"></div>
+      </div>
+      <span class="install-title">bash — ~/Downloads/prism</span>
+    </div>
+    <div class="install-body">
+
+      <div class="install-step">
+        <div class="install-step-label">Step 01 — Run the installer</div>
+        <div class="install-cmd">
+          <div><span class="prompt">$</span>python install.py</div>
+          <button class="copy-btn" onclick="copyCmd(this,'python install.py')">Copy</button>
+        </div>
+      </div>
+
+      <div class="install-step">
+        <div class="install-step-label">Step 02 — Launch Prism</div>
+        <div class="install-cmd">
+          <div><span class="prompt">$</span>python prism.py</div>
+          <button class="copy-btn" onclick="copyCmd(this,'python prism.py')">Copy</button>
+        </div>
+      </div>
+
+      <div style="background:rgba(232,0,26,0.06);border:1px solid rgba(232,0,26,0.15);border-radius:10px;padding:16px 18px;">
+        <div style="font-size:12px;color:var(--txt2);line-height:1.7;">
+          <strong style="color:var(--red3);">💡 Tip:</strong> The installer auto-detects your OS and handles FFmpeg for
+          <strong style="color:var(--txt);">Windows</strong> (gyan.dev build),
+          <strong style="color:var(--txt);">macOS</strong> (Homebrew) and
+          <strong style="color:var(--txt);">Linux</strong> (apt / dnf / pacman / static binary).
+          No manual steps needed.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── PRIVACY / OPEN SOURCE ── -->
+<section id="privacy" class="reveal">
+  <div class="privacy-banner">
+    <div class="privacy-left">
+      <div class="section-label">Open &amp; Local</div>
+      <h2>Your data stays<br>on your machine.</h2>
+      <p>Prism is fully offline. Nothing is uploaded, tracked or sent anywhere. All downloads go directly to your local disk — the app stores only a small JSON history file in its own folder.</p>
+      <div style="margin-top:32px;">
+        <a href="#install" class="btn-primary" style="display:inline-flex;">↓&nbsp; Download Free</a>
+      </div>
+    </div>
+    <div class="privacy-right">
+      <div class="privacy-item">
+        <div class="privacy-item-icon">🚫</div>
+        <div class="privacy-item-text">
+          <strong>Zero tracking</strong>
+          <span>No analytics, no telemetry, no accounts</span>
+        </div>
+      </div>
+      <div class="privacy-item">
+        <div class="privacy-item-icon">🏠</div>
+        <div class="privacy-item-text">
+          <strong>100% Local</strong>
+          <span>Everything stays on your device</span>
+        </div>
+      </div>
+      <div class="privacy-item">
+        <div class="privacy-item-icon">🔓</div>
+        <div class="privacy-item-text">
+          <strong>Open Source</strong>
+          <span>Full Python source — inspect every line</span>
+        </div>
+      </div>
+      <div class="privacy-item">
+        <div class="privacy-item-icon">📵</div>
+        <div class="privacy-item-text">
+          <strong>No Ads. Ever.</strong>
+          <span>Free forever, no paywall, no nag screen</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── ABOUT ── -->
+<section id="about" class="reveal">
+  <div class="about-inner">
+    <div class="section-label">About</div>
+    <h2 class="section-title">Built for power<br>users who care.</h2>
+    <p class="section-sub">
+      Prism was built because every other YouTube downloader is either bloated, ugly, shady, or all three.
+      It's a desktop app that respects your time and your taste — built in pure Python with a handcrafted PyQt6 UI.
+    </p>
+    <div class="about-btns">
+      <a href="#install" class="btn-primary">↓&nbsp; Get Prism Free</a>
+      <a href="#features" class="btn-secondary">View all features →</a>
+    </div>
+
+    <div style="margin-top:56px;padding-top:48px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:24px;text-align:left;">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;">
+        <div style="font-size:24px;margin-bottom:12px;">🎯</div>
+        <div style="font-weight:700;font-size:15px;color:var(--txt);margin-bottom:8px;">Pixel-perfect UI</div>
+        <div style="font-size:13px;color:var(--txt2);line-height:1.6;">Custom animated background, cursor glow, smooth panel animations and a cinematic splash screen.</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;">
+        <div style="font-size:24px;margin-bottom:12px;">🧵</div>
+        <div style="font-weight:700;font-size:15px;color:var(--txt);margin-bottom:8px;">Non-blocking downloads</div>
+        <div style="font-size:13px;color:var(--txt2);line-height:1.6;">All downloads run in background QThreads — the UI stays responsive at all times, always.</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;">
+        <div style="font-size:24px;margin-bottom:12px;">📦</div>
+        <div style="font-weight:700;font-size:15px;color:var(--txt);margin-bottom:8px;">Stack multiple videos</div>
+        <div style="font-size:13px;color:var(--txt2);line-height:1.6;">On the Download page, fetch and queue as many videos as you like — each gets its own card.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">
+    <div class="nav-logo-dot"></div>
+    Prism
+  </div>
+  <div class="footer-center">
+    YouTube Media Suite v7.3<br>
+    <span style="color:var(--txt3);">Open Source · Free Forever · 100% Local</span>
+  </div>
+  <div class="footer-links">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">Docs</a>
+    <a href="#install">Install</a>
+    <a href="#about">About</a>
+  </div>
+</footer>
+
+<script>
+/* ── Cursor ── */
+const cur = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  cur.style.left=mx+'px';cur.style.top=my+'px';
+});
+(function loop(){
+  rx+=(mx-rx)*.12;ry+=(my-ry)*.12;
+  ring.style.left=rx+'px';ring.style.top=ry+'px';
+  requestAnimationFrame(loop);
+})();
+document.addEventListener('mousedown',()=>{
+  cur.style.transform='translate(-50%,-50%) scale(1.8)';
+});
+document.addEventListener('mouseup',()=>{
+  cur.style.transform='translate(-50%,-50%) scale(1)';
+});
+
+/* ── Animated grid canvas ── */
+const cv=document.getElementById('grid-canvas');
+const ctx=cv.getContext('2d');
+let W,H,ox=0,oy=0;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+function drawGrid(){
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,0.035)';
+  ctx.lineWidth=.6;
+  const S=48;
+  const tx=ox%S,ty=oy%S;
+  ctx.beginPath();
+  for(let x=tx;x<W+S;x+=S){ctx.moveTo(x,0);ctx.lineTo(x,H);}
+  for(let y=ty;y<H+S;y+=S){ctx.moveTo(0,y);ctx.lineTo(W,y);}
+  ctx.stroke();
+  // top glow
+  const g1=ctx.createRadialGradient(W/2,-40,0,W/2,-40,500);
+  g1.addColorStop(0,'rgba(232,0,26,0.08)');
+  g1.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g1;ctx.fillRect(0,0,W,H);
+  // corner glow
+  const g2=ctx.createRadialGradient(W,H,0,W,H,400);
+  g2.addColorStop(0,'rgba(150,0,80,0.07)');
+  g2.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g2;ctx.fillRect(0,0,W,H);
+}
+(function animGrid(){
+  ox+=0.18;oy+=0.10;drawGrid();requestAnimationFrame(animGrid);
+})();
+
+/* ── Navbar scroll ── */
+const nav=document.getElementById('navbar');
+window.addEventListener('scroll',()=>{
+  nav.classList.toggle('scrolled',window.scrollY>40);
+});
+
+/* ── Reveal on scroll ── */
+const reveals=document.querySelectorAll('.reveal');
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}
+  });
+},{threshold:0.1});
+reveals.forEach(r=>obs.observe(r));
+
+/* ── Tab switcher ── */
+function switchTab(id,btn){
+  document.querySelectorAll('.hiw-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.hiw-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+id).classList.add('active');
+}
+
+/* ── Copy command ── */
+function copyCmd(btn,text){
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},1800);
+  });
+}
+
+/* ── Number counter animation ── */
+function animateCounters(){
+  document.querySelectorAll('.stat-n').forEach(el=>{
+    const target=el.textContent;
+    if(target==='∞'||target==='3') return;
+    const num=parseInt(target);
+    if(isNaN(num)) return;
+    let start=0;
+    const step=()=>{
+      start+=Math.ceil(num/40);
+      if(start>=num){el.textContent=target;return;}
+      el.textContent=start+(target.includes('fps')?'fps':target.includes('K')?'K':'');
+      requestAnimationFrame(step);
+    };
+    step();
+  });
+}
+const heroObs=new IntersectionObserver(([e])=>{
+  if(e.isIntersecting){animateCounters();heroObs.disconnect();}
+},{threshold:.4});
+heroObs.observe(document.getElementById('hero'));
+</script>
+</body>
+</html>

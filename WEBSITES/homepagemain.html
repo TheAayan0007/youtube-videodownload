@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Prism — YouTube Media Suite v7.3</title>
+<meta name="description" content="Premium YouTube downloader. Download video, audio, playlists and thumbnails in any quality. Free forever. Windows, macOS, Linux.">
+<meta property="og:title" content="Prism — YouTube Media Suite">
+<meta property="og:description" content="Premium desktop app for downloading YouTube content. Free, local, private.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+/* ─── VARIABLES ─────────────────────────────────────── */
+:root {
+  --bg:       #06060b;
+  --s1:       #0b0b12;
+  --s2:       #101018;
+  --s3:       #14141f;
+  --s4:       #1a1a28;
+  --bd:       #1c1c2a;
+  --bd2:      #272738;
+  --bd3:      #333350;
+  --acc:      #3b82f6;
+  --acc2:     #60a5fa;
+  --acc3:     #93c5fd;
+  --acc-d:    #1d4ed8;
+  --pur:      #7c3aed;
+  --pur2:     #a78bfa;
+  --pur3:     #c4b5fd;
+  --t:        #eff0f8;
+  --t2:       #7b7d98;
+  --t3:       #3a3b52;
+  --t4:       #24243a;
+  --green:    #4ade80;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Plus Jakarta Sans', sans-serif;
+  --display:  'Outfit', sans-serif;
+  --ease:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease2:    cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── RESET ─────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  background: var(--bg);
+  color: var(--t);
+  font-family: var(--sans);
+  overflow-x: hidden;
+  cursor: none;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+button { border: none; cursor: none; font-family: inherit; }
+img { max-width: 100%; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--bd3); border-radius: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ─── CURSOR ─────────────────────────────────────────── */
+#cur-dot {
+  position: fixed; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--acc); pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%);
+  box-shadow: 0 0 12px var(--acc), 0 0 24px rgba(59,130,246,.4);
+  transition: width .12s, height .12s, background .2s;
+}
+#cur-ring {
+  position: fixed; width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid rgba(59,130,246,.35); pointer-events: none; z-index: 9998;
+  transform: translate(-50%,-50%); transition: all .15s ease;
+}
+.cursor-big #cur-dot { width: 10px; height: 10px; background: var(--acc2); }
+.cursor-big #cur-ring { width: 52px; height: 52px; border-color: var(--acc); }
+
+/* ─── CANVAS BG ──────────────────────────────────────── */
+#bg-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .7; }
+
+/* ─── AURORA ─────────────────────────────────────────── */
+#aurora {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  overflow: hidden;
+}
+.aurora-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(90px); opacity: .12;
+  animation: drift 18s ease-in-out infinite;
+}
+.aurora-blob:nth-child(1) {
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, var(--acc), transparent 70%);
+  top: -200px; left: -150px;
+  animation-delay: 0s; animation-duration: 22s;
+}
+.aurora-blob:nth-child(2) {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, var(--pur), transparent 70%);
+  top: -100px; right: -100px;
+  animation-delay: -8s; animation-duration: 18s;
+}
+.aurora-blob:nth-child(3) {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, #1d4ed8, transparent 70%);
+  bottom: -100px; left: 30%;
+  animation-delay: -14s; animation-duration: 25s;
+}
+.aurora-blob:nth-child(4) {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, var(--pur), transparent 70%);
+  bottom: -50px; right: 10%;
+  animation-delay: -4s; animation-duration: 20s;
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%       { transform: translate(40px, -30px) scale(1.05); }
+  50%       { transform: translate(-20px, 50px) scale(.95); }
+  75%       { transform: translate(30px, 20px) scale(1.08); }
+}
+
+/* ─── Z-INDEX LAYER ──────────────────────────────────── */
+.layer { position: relative; z-index: 2; }
+
+/* ─── NAV ────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 60px; display: flex; align-items: center;
+  padding: 0 clamp(20px, 4vw, 48px);
+  transition: background .3s, border-color .3s, backdrop-filter .3s;
+  border-bottom: 1px solid transparent;
+}
+nav.scrolled {
+  background: rgba(6,6,11,.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-color: var(--bd);
+}
+.nav-logo {
+  font-family: var(--display); font-size: 18px; font-weight: 800;
+  display: flex; align-items: center; gap: 8px; letter-spacing: -.4px;
+  flex-shrink: 0;
+}
+.nav-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--acc);
+  box-shadow: 0 0 10px var(--acc), 0 0 22px rgba(59,130,246,.5);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .6; transform: scale(.85); }
+}
+.nav-links {
+  display: flex; align-items: center; gap: 2px;
+  margin-left: auto; margin-right: 20px;
+}
+.nav-links a {
+  font-size: 13px; color: var(--t2); padding: 6px 14px;
+  border-radius: 8px; transition: color .2s, background .2s;
+  font-weight: 500; white-space: nowrap;
+}
+.nav-links a:hover { color: var(--t); background: rgba(255,255,255,.05); }
+.nav-cta {
+  display: flex; align-items: center; gap: 7px;
+  background: linear-gradient(135deg, var(--acc-d), var(--acc));
+  color: #fff; padding: 8px 20px; border-radius: 9px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 0 28px rgba(59,130,246,.35), 0 4px 16px rgba(0,0,0,.3);
+  transition: all .2s; white-space: nowrap;
+}
+.nav-cta:hover {
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+  box-shadow: 0 0 40px rgba(59,130,246,.55);
+  transform: translateY(-1px);
+}
+.nav-ham {
+  display: none; background: none; border: 1px solid var(--bd);
+  border-radius: 8px; padding: 6px 10px; color: var(--t2);
+  font-size: 16px; transition: all .2s; flex-shrink: 0;
+}
+.nav-ham:hover { color: var(--t); border-color: var(--bd2); }
+.nav-mobile-menu {
+  display: none; position: fixed; top: 60px; left: 0; right: 0; z-index: 199;
+  background: rgba(6,6,11,.97); border-bottom: 1px solid var(--bd);
+  backdrop-filter: blur(24px); padding: 16px 20px 24px;
+  flex-direction: column; gap: 4px;
+}
+.nav-mobile-menu.open { display: flex; }
+.nav-mobile-menu a {
+  font-size: 15px; color: var(--t2); padding: 10px 16px;
+  border-radius: 10px; transition: all .2s; font-weight: 500;
+}
+.nav-mobile-menu a:hover { color: var(--t); background: rgba(255,255,255,.05); }
+.nav-mobile-menu .nav-cta {
+  margin-top: 8px; justify-content: center;
+}
+
+/* ─── HERO ───────────────────────────────────────────── */
+#hero {
+  min-height: 100vh; display: flex; align-items: center;
+  padding: clamp(100px,12vh,140px) clamp(20px,5vw,64px) clamp(60px,8vh,100px);
+  position: relative; overflow: hidden;
+}
+.hero-inner {
+  max-width: 1280px; margin: 0 auto; width: 100%;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 60px; align-items: center;
+}
+.hero-left { display: flex; flex-direction: column; align-items: flex-start; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px; border-radius: 100px;
+  background: rgba(59,130,246,.08);
+  border: 1px solid rgba(59,130,246,.25);
+  font-family: var(--mono); font-size: 11px; color: var(--acc2);
+  letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 28px;
+}
+.badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--acc); box-shadow: 0 0 8px var(--acc);
+  animation: pulse-dot 2s infinite;
+}
+.hero-h1 {
+  font-family: var(--display); font-size: clamp(44px, 6vw, 82px);
+  font-weight: 900; line-height: .92; letter-spacing: -3px;
+  margin-bottom: 24px; color: var(--t);
+}
+.hero-h1 .grad {
+  display: block;
+  background: linear-gradient(110deg, var(--acc2) 0%, var(--pur2) 50%, var(--acc3) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: grad-shift 6s linear infinite;
+}
+@keyframes grad-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.hero-sub {
+  font-size: clamp(15px, 1.5vw, 17px); color: var(--t2);
+  line-height: 1.75; font-weight: 300; max-width: 430px;
+  margin-bottom: 40px;
+}
+.hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border-radius: 10px;
+  font-size: 14px; font-weight: 600; transition: all .2s var(--ease);
+  white-space: nowrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--acc-d), var(--acc));
+  color: #fff;
+  box-shadow: 0 0 36px rgba(59,130,246,.4), 0 8px 32px rgba(0,0,0,.4);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 52px rgba(59,130,246,.6), 0 12px 40px rgba(0,0,0,.45);
+}
+.btn-secondary {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--bd2);
+  color: var(--t2);
+}
+.btn-secondary:hover {
+  background: rgba(255,255,255,.07);
+  border-color: var(--bd3); color: var(--t);
+  transform: translateY(-1px);
+}
+.hero-stats {
+  display: flex; gap: 36px; margin-top: 52px;
+  padding-top: 36px; border-top: 1px solid var(--bd);
+  flex-wrap: wrap;
+}
+.hstat-n {
+  display: block; font-family: var(--mono);
+  font-size: 28px; font-weight: 600;
+  color: var(--acc2); line-height: 1;
+}
+.hstat-l {
+  font-size: 11px; color: var(--t3); letter-spacing: 2px;
+  text-transform: uppercase; margin-top: 5px;
+}
+
+/* ─── APP MOCKUP ────────────────────────────────────── */
+.hero-right {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.mockup-float {
+  animation: float-window 6s ease-in-out infinite;
+  position: relative; width: 100%; max-width: 560px;
+}
+@keyframes float-window {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-14px); }
+}
+.mockup-glow {
+  position: absolute; inset: -30px;
+  background: radial-gradient(ellipse at 50% 60%, rgba(59,130,246,.18), transparent 65%);
+  pointer-events: none;
+}
+.app-win {
+  background: rgba(9,9,13,.97);
+  border: 1px solid rgba(59,130,246,.15);
+  border-radius: 16px; overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.05);
+}
+.win-titlebar {
+  background: #060609; height: 36px;
+  display: flex; align-items: center; padding: 0 14px; gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.win-dot { width: 11px; height: 11px; border-radius: 50%; }
+.win-dot.r { background: #ff5f57; }
+.win-dot.y { background: #febc2e; }
+.win-dot.g { background: #28c840; }
+.win-title {
+  margin-left: 8px; font-family: var(--mono); font-size: 10px;
+  color: var(--t3); letter-spacing: .5px;
+}
+.win-logobar {
+  background: #08080d; height: 40px;
+  display: flex; align-items: center; padding: 0 14px; gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.win-logo-name {
+  font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--t);
+}
+.win-logo-ver {
+  font-family: var(--mono); font-size: 9px; color: var(--t3);
+  margin-left: auto; letter-spacing: 1px;
+}
+.win-nav {
+  background: #08080d; height: 46px;
+  display: flex; align-items: center; padding: 0 10px; gap: 4px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.win-tab {
+  padding: 5px 14px; border-radius: 7px;
+  font-size: 11px; font-weight: 500; color: var(--t3);
+  border: 1px solid transparent; white-space: nowrap;
+}
+.win-tab.active {
+  background: rgba(59,130,246,.15);
+  border-color: rgba(59,130,246,.3);
+  color: var(--acc2);
+}
+.win-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.win-search {
+  background: rgba(255,255,255,.03);
+  border: 1.5px solid rgba(59,130,246,.25);
+  border-radius: 14px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.win-search-icon { font-size: 12px; opacity: .4; }
+.win-search-text {
+  font-size: 11px; color: var(--t3);
+  font-family: var(--mono); flex: 1;
+}
+.win-fetch {
+  background: var(--acc-d);
+  color: #fff; font-size: 10px; font-weight: 700;
+  padding: 5px 12px; border-radius: 8px; white-space: nowrap;
+}
+.win-card {
+  background: rgba(14,14,22,.8);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 12px; overflow: hidden;
+  display: flex; gap: 0;
+}
+.win-thumb {
+  width: 120px; flex-shrink: 0;
+  background: linear-gradient(135deg, #0d1020, #1a1030);
+  position: relative; display: flex; align-items: center;
+  justify-content: center; min-height: 90px;
+}
+.win-thumb-play {
+  font-size: 20px; opacity: .25;
+}
+.win-thumb-dur {
+  position: absolute; bottom: 5px; right: 5px;
+  font-family: var(--mono); font-size: 9px; color: var(--t);
+  background: rgba(0,0,0,.7); border-radius: 4px; padding: 2px 5px;
+}
+.win-info { padding: 10px 12px; flex: 1; }
+.win-channel {
+  font-family: var(--mono); font-size: 8px; color: var(--acc2);
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px;
+}
+.win-vidtitle {
+  font-size: 11px; font-weight: 600; color: var(--t);
+  line-height: 1.4; margin-bottom: 6px;
+}
+.win-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.win-tag {
+  font-size: 9px; padding: 2px 7px; border-radius: 100px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08); color: var(--t2);
+  font-family: var(--mono);
+}
+.win-tag.hi {
+  background: rgba(59,130,246,.08);
+  border-color: rgba(59,130,246,.25); color: var(--acc2);
+}
+.win-dl-row {
+  display: flex; align-items: center; gap: 6px; margin-top: 2px;
+}
+.win-quality {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 6px; padding: 3px 8px;
+  font-size: 9px; color: var(--t2); font-family: var(--mono);
+}
+.win-dlbtn {
+  margin-left: auto;
+  background: linear-gradient(135deg, var(--acc-d), var(--acc));
+  color: #fff; font-size: 10px; font-weight: 700;
+  padding: 5px 12px; border-radius: 7px;
+}
+.win-prog-wrap { padding: 0 14px 12px; }
+.win-prog-row {
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 9px; color: var(--t2);
+  margin-bottom: 5px;
+}
+.win-prog-bar {
+  height: 3px; background: rgba(255,255,255,.06); border-radius: 2px;
+  overflow: hidden;
+}
+.win-prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--acc-d), var(--acc));
+  border-radius: 2px;
+  animation: prog-fill 4s ease-in-out infinite;
+}
+@keyframes prog-fill {
+  0% { width: 0%; }
+  70% { width: 78%; }
+  85% { width: 78%; }
+  100% { width: 0%; }
+}
+
+/* ─── SECTION COMMON ─────────────────────────────────── */
+.section {
+  max-width: 1280px; margin: 0 auto;
+  padding: clamp(80px, 10vh, 120px) clamp(20px, 5vw, 64px);
+}
+.sec-divider {
+  max-width: 1280px; margin: 0 auto;
+  height: 1px; background: var(--bd);
+  position: relative;
+  padding: 0 clamp(20px, 5vw, 64px);
+}
+.sec-divider::after {
+  content: ''; position: absolute; left: 50%; top: -3px;
+  transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--acc); box-shadow: 0 0 10px var(--acc);
+}
+.sec-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 3px;
+  color: var(--acc2); text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.sec-label::before {
+  content: ''; width: 24px; height: 1px;
+  background: linear-gradient(90deg, var(--acc), transparent);
+}
+.sec-h {
+  font-family: var(--display); font-size: clamp(30px, 4vw, 52px);
+  font-weight: 800; letter-spacing: -2px; line-height: 1;
+  margin-bottom: 14px; color: var(--t);
+}
+.sec-sub {
+  font-size: 16px; color: var(--t2); line-height: 1.7;
+  font-weight: 300; max-width: 460px;
+}
+
+/* ─── REVEAL ANIMATIONS ──────────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity .75s var(--ease), transform .75s var(--ease);
+}
+.reveal.visible { opacity: 1; transform: none; }
+.reveal-l {
+  opacity: 0; transform: translateX(-28px);
+  transition: opacity .75s var(--ease), transform .75s var(--ease);
+}
+.reveal-l.visible { opacity: 1; transform: none; }
+.reveal-r {
+  opacity: 0; transform: translateX(28px);
+  transition: opacity .75s var(--ease), transform .75s var(--ease);
+}
+.reveal-r.visible { opacity: 1; transform: none; }
+.stagger > * { opacity: 0; transform: translateY(24px); }
+.stagger.visible > * {
+  animation: stagger-in .6s var(--ease) forwards;
+}
+.stagger.visible > *:nth-child(1) { animation-delay: .0s; }
+.stagger.visible > *:nth-child(2) { animation-delay: .07s; }
+.stagger.visible > *:nth-child(3) { animation-delay: .14s; }
+.stagger.visible > *:nth-child(4) { animation-delay: .21s; }
+.stagger.visible > *:nth-child(5) { animation-delay: .28s; }
+.stagger.visible > *:nth-child(6) { animation-delay: .35s; }
+.stagger.visible > *:nth-child(7) { animation-delay: .42s; }
+.stagger.visible > *:nth-child(8) { animation-delay: .49s; }
+.stagger.visible > *:nth-child(9) { animation-delay: .56s; }
+@keyframes stagger-in {
+  to { opacity: 1; transform: none; }
+}
+
+/* ─── DEMO SECTION ───────────────────────────────────── */
+#demo { background: var(--s1); position: relative; overflow: hidden; }
+#demo::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--bd3), transparent);
+}
+#demo::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--bd3), transparent);
+}
+.demo-header { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 48px; }
+.demo-tabs {
+  display: flex; gap: 6px; background: var(--s2);
+  border: 1px solid var(--bd); border-radius: 12px; padding: 5px;
+  flex-wrap: wrap; justify-content: center; margin-bottom: 32px;
+}
+.dtab {
+  padding: 8px 20px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; color: var(--t2);
+  border: 1px solid transparent;
+  transition: all .2s; white-space: nowrap; cursor: none;
+}
+.dtab:hover { color: var(--t); background: rgba(255,255,255,.04); }
+.dtab.active {
+  background: rgba(59,130,246,.12);
+  border-color: rgba(59,130,246,.3);
+  color: var(--acc2);
+}
+.demo-panels { position: relative; }
+.demo-panel {
+  display: none;
+  background: rgba(9,9,14,.95);
+  border: 1px solid var(--bd); border-radius: 20px; overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.03);
+}
+.demo-panel.active { display: block; animation: panel-in .4s var(--ease); }
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.demo-topbar {
+  display: flex; align-items: center; gap: 6px;
+  background: #07070d; padding: 11px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.demo-dots { display: flex; gap: 6px; }
+.demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+.demo-dot.r { background: #ff5f57; } .demo-dot.y { background: #febc2e; } .demo-dot.g { background: #28c840; }
+.demo-winname {
+  margin-left: 12px; font-family: var(--mono); font-size: 10px;
+  color: var(--t3); letter-spacing: .5px;
+}
+.demo-navrow {
+  background: #080810; padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  display: flex; align-items: center; gap: 6px;
+}
+.demo-navtab {
+  padding: 5px 14px; border-radius: 7px; font-size: 11px;
+  font-weight: 500; color: var(--t3); border: 1px solid transparent;
+}
+.demo-navtab.on {
+  background: rgba(59,130,246,.15); border-color: rgba(59,130,246,.3);
+  color: var(--acc2);
+}
+.demo-body { padding: 20px; }
+
+/* Download demo */
+.dd-search {
+  background: rgba(255,255,255,.03);
+  border: 1.5px solid rgba(59,130,246,.3);
+  border-radius: 18px; padding: 12px 20px;
+  display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+}
+.dd-search-input {
+  flex: 1; font-size: 13px; color: var(--t); font-family: var(--mono);
+  background: transparent; border: none; outline: none;
+}
+.dd-search-input::placeholder { color: var(--t3); }
+.dd-search-btn {
+  background: linear-gradient(135deg, var(--acc-d), var(--acc));
+  color: #fff; font-size: 12px; font-weight: 700;
+  padding: 8px 20px; border-radius: 12px; cursor: none;
+  transition: all .2s; white-space: nowrap; flex-shrink: 0;
+}
+.dd-search-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,130,246,.4); }
+.dd-search-btn:disabled { opacity: .5; cursor: none; transform: none; }
+.dd-card {
+  background: rgba(14,14,22,.7);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px; overflow: hidden; display: flex;
+  transition: border-color .3s;
+}
+.dd-card.loaded { border-color: rgba(59,130,246,.2); }
+.dd-thumb {
+  width: 200px; flex-shrink: 0;
+  background: linear-gradient(160deg, #0a0d18, #12082a, #0d1420);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; min-height: 130px; overflow: hidden;
+}
+.dd-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.dd-play { font-size: 32px; opacity: .2; position: relative; z-index: 1; }
+.dd-dur-badge {
+  position: absolute; bottom: 8px; right: 8px; z-index: 2;
+  font-family: var(--mono); font-size: 10px; color: var(--t);
+  background: rgba(0,0,0,.75); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 5px; padding: 3px 7px;
+}
+.dd-info { padding: 16px 20px; flex: 1; }
+.dd-channel { font-family: var(--mono); font-size: 9px; color: var(--acc2); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 6px; }
+.dd-title { font-size: 15px; font-weight: 600; color: var(--t); margin-bottom: 10px; line-height: 1.4; }
+.dd-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.dd-tag {
+  font-size: 11px; padding: 3px 10px; border-radius: 100px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  color: var(--t2); font-family: var(--mono);
+}
+.dd-tag.hi { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.25); color: var(--acc2); }
+.dd-pills { display: flex; gap: 6px; margin-bottom: 14px; }
+.dd-pill {
+  padding: 5px 14px; border-radius: 7px; font-size: 11px; font-weight: 500;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--t2);
+}
+.dd-pill.on { background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.35); color: var(--acc2); }
+.dd-bottom { display: flex; align-items: center; gap: 10px; }
+.dd-select {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px; padding: 6px 12px; font-size: 11px; color: var(--t2); font-family: var(--mono);
+}
+.dd-dlbtn {
+  margin-left: auto;
+  background: linear-gradient(135deg, var(--acc-d), var(--acc));
+  color: #fff; font-size: 12px; font-weight: 700;
+  padding: 8px 22px; border-radius: 9px; cursor: none;
+  transition: all .2s; white-space: nowrap;
+}
+.dd-dlbtn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(59,130,246,.4); }
+.dd-dlbtn:disabled { opacity: .4; transform: none; cursor: none; }
+.dd-prog-area { padding: 0 20px 16px; }
+.dd-prog-row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--t2); margin-bottom: 5px; }
+.dd-prog-track { height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
+.dd-prog-fill {
+  height: 100%; border-radius: 2px; width: 0%;
+  background: linear-gradient(90deg, var(--acc-d), var(--acc));
+  transition: width .4s ease;
+}
+
+/* status / error message */
+.dd-status {
+  font-family: var(--mono); font-size: 11px; padding: 8px 14px;
+  border-radius: 8px; margin-bottom: 14px;
+  display: none;
+}
+.dd-status.loading {
+  display: block; color: var(--acc2);
+  background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2);
+}
+.dd-status.error {
+  display: block; color: #ff6080;
+  background: rgba(255,77,109,.06); border: 1px solid rgba(255,77,109,.2);
+}
+.dd-status.success {
+  display: block; color: var(--green);
+  background: rgba(74,222,128,.06); border: 1px solid rgba(74,222,128,.2);
+}
+
+/* Playlist demo */
+.pl-stats {
+  display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.pl-stat {
+  background: rgba(255,255,255,.03); border: 1px solid var(--bd);
+  border-radius: 10px; padding: 10px 16px;
+}
+.pl-stat-n { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--acc2); }
+.pl-stat-l { font-size: 9px; color: var(--t3); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; }
+.pl-rows { display: flex; flex-direction: column; gap: 6px; }
+.pl-row {
+  background: rgba(255,255,255,.025); border: 1px solid var(--bd);
+  border-radius: 10px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 12px;
+  transition: border-color .2s;
+}
+.pl-row:hover { border-color: rgba(59,130,246,.3); }
+.pl-chk {
+  width: 18px; height: 18px; border-radius: 5px;
+  border: 2px solid var(--bd2); background: rgba(59,130,246,.15);
+  border-color: rgba(59,130,246,.4);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.pl-chk-tick { color: var(--acc); font-size: 10px; }
+.pl-idx { font-family: var(--mono); font-size: 10px; color: var(--t3); width: 20px; }
+.pl-mini-thumb {
+  width: 72px; height: 40px; border-radius: 6px; flex-shrink: 0;
+  background: linear-gradient(135deg, #0d1020, #150d25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; opacity: .4;
+}
+.pl-vtitle { font-size: 12px; font-weight: 500; color: var(--t); flex: 1; line-height: 1.3; }
+.pl-vmeta { font-family: var(--mono); font-size: 9px; color: var(--t3); margin-top: 2px; }
+.pl-rowbtn {
+  font-size: 10px; padding: 4px 10px; border-radius: 6px;
+  background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.25);
+  color: var(--acc2); font-weight: 600; white-space: nowrap;
+}
+.pl-rowbtn.done {
+  background: rgba(74,222,128,.08); border-color: rgba(74,222,128,.25);
+  color: var(--green);
+}
+
+/* Thumbnail demo */
+.tb-card {
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.06);
+}
+.tb-img {
+  width: 100%; aspect-ratio: 16/9;
+  background: linear-gradient(160deg, #090d1a 0%, #0e0820 40%, #050d1a 100%);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.tb-img-inner { text-align: center; }
+.tb-play-big { font-size: 60px; opacity: .15; display: block; }
+.tb-res-badge {
+  position: absolute; bottom: 12px; right: 12px;
+  font-family: var(--mono); font-size: 10px; color: var(--t);
+  background: rgba(0,0,0,.75); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 6px; padding: 4px 10px;
+}
+.tb-info-row {
+  background: rgba(14,14,22,.8); padding: 16px 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.tb-title-txt { flex: 1; font-size: 13px; font-weight: 500; color: var(--t); }
+.tb-dlbtns { display: flex; gap: 8px; }
+.tb-dlbtn-jpg {
+  background: linear-gradient(135deg, var(--acc-d), var(--acc));
+  color: #fff; font-size: 11px; font-weight: 700;
+  padding: 7px 16px; border-radius: 8px;
+}
+.tb-dlbtn-png {
+  background: transparent; border: 1px solid var(--bd2);
+  color: var(--t2); font-size: 11px; font-weight: 600;
+  padding: 7px 16px; border-radius: 8px;
+}
+/* History demo */
+.hist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.hist-title { font-family: var(--display); font-size: 18px; font-weight: 700; }
+.hist-clear { font-size: 11px; padding: 5px 12px; border-radius: 7px; background: rgba(255,77,109,.08); border: 1px solid rgba(255,77,109,.25); color: #ff6080; font-weight: 600; }
+.hist-cards { display: flex; flex-direction: column; gap: 8px; }
+.hist-card {
+  background: rgba(255,255,255,.025); border: 1px solid var(--bd);
+  border-radius: 12px; padding: 12px 16px;
+  display: flex; align-items: center; gap: 14px;
+}
+.hist-thumb {
+  width: 80px; height: 46px; border-radius: 7px; flex-shrink: 0;
+  background: linear-gradient(135deg, #0d1020, #120828);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; opacity: .3;
+}
+.hist-info { flex: 1; }
+.hist-vtitle { font-size: 13px; font-weight: 500; color: var(--t); margin-bottom: 3px; }
+.hist-meta { font-family: var(--mono); font-size: 10px; color: var(--t3); }
+.hist-date { font-family: var(--mono); font-size: 10px; color: var(--acc2); }
+
+/* ─── FEATURES ───────────────────────────────────────── */
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--bd);
+  border: 1px solid var(--bd); border-radius: 20px; overflow: hidden;
+  margin-top: 56px;
+}
+.fc {
+  background: var(--bg); padding: 28px 26px;
+  position: relative; overflow: hidden;
+  transition: background .25s;
+}
+.fc::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--acc), var(--pur));
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .4s var(--ease);
+}
+.fc:hover { background: var(--s1); }
+.fc:hover::before { transform: scaleX(1); }
+.fc-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 16px;
+  transition: transform .25s, background .25s;
+}
+.fc:hover .fc-icon { transform: scale(1.1); background: rgba(59,130,246,.14); }
+.fc-title {
+  font-family: var(--display); font-size: 15px; font-weight: 700;
+  color: var(--t); margin-bottom: 8px;
+}
+.fc-desc { font-size: 13px; color: var(--t2); line-height: 1.65; }
+.fc-chip {
+  display: inline-block; margin-top: 14px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--acc2);
+  background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.18);
+  border-radius: 100px; padding: 3px 10px;
+}
+
+/* ─── HOW IT WORKS ───────────────────────────────────── */
+#how { background: var(--s1); }
+#how::before, #how::after {
+  content: ''; display: block; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--bd3), transparent);
+}
+.steps-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 40px; margin-top: 56px; position: relative;
+}
+.steps-row::before {
+  content: ''; position: absolute; top: 36px; left: calc(16.6% + 20px);
+  right: calc(16.6% + 20px); height: 1px;
+  background: linear-gradient(90deg, var(--acc), var(--pur), var(--acc));
+  opacity: .3;
+}
+.step-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.step-num {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(59,130,246,.15), rgba(124,58,237,.15));
+  border: 1px solid rgba(59,130,246,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--acc2);
+  margin-bottom: 20px; position: relative; z-index: 1;
+  transition: all .3s var(--ease);
+}
+.step-card:hover .step-num {
+  background: linear-gradient(135deg, rgba(59,130,246,.25), rgba(124,58,237,.25));
+  border-color: var(--acc); box-shadow: 0 0 28px rgba(59,130,246,.25);
+  transform: scale(1.08);
+}
+.step-title { font-family: var(--display); font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+.step-desc { font-size: 14px; color: var(--t2); line-height: 1.65; max-width: 220px; }
+
+/* ─── INSTALL ────────────────────────────────────────── */
+.install-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 24px; margin-top: 56px;
+}
+.method-card {
+  background: var(--s1); border: 1px solid var(--bd);
+  border-radius: 16px; overflow: hidden;
+  transition: border-color .25s, box-shadow .25s;
+}
+.method-card:hover {
+  border-color: rgba(59,130,246,.3);
+  box-shadow: 0 0 40px rgba(59,130,246,.06);
+}
+.mc-head {
+  padding: 18px 22px; border-bottom: 1px solid var(--bd);
+  display: flex; align-items: center; gap: 12px;
+}
+.mc-num {
+  font-family: var(--mono); font-size: 10px; color: var(--acc2);
+  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
+  border-radius: 7px; padding: 4px 9px; letter-spacing: 1px;
+}
+.mc-title { font-family: var(--display); font-size: 16px; font-weight: 700; }
+.mc-badge {
+  margin-left: auto; font-size: 9px; font-family: var(--mono);
+  color: var(--t3); letter-spacing: 1px; text-transform: uppercase;
+}
+.mc-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.step-row { display: flex; align-items: flex-start; gap: 12px; }
+.snum {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
+  color: var(--acc2); font-family: var(--mono); font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.step-text strong { display: block; font-size: 13px; color: var(--t); font-weight: 600; margin-bottom: 2px; }
+.step-text span { font-size: 12px; color: var(--t2); line-height: 1.5; }
+.cmd-box {
+  background: rgba(0,0,0,.4); border: 1px solid var(--bd);
+  border-radius: 9px; padding: 11px 14px;
+  font-family: var(--mono); font-size: 12px; color: #7dd3fc;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.cmd-pr { color: var(--acc2); margin-right: 6px; }
+.cpbtn {
+  background: rgba(255,255,255,.05); border: 1px solid var(--bd2);
+  color: var(--t2); font-size: 10px; padding: 4px 10px; border-radius: 6px;
+  cursor: none; transition: all .2s; font-family: var(--sans); white-space: nowrap;
+}
+.cpbtn:hover { background: rgba(255,255,255,.09); color: var(--t); }
+.cpbtn.ok { color: var(--green); border-color: rgba(74,222,128,.3); }
+.os-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.os-pill {
+  padding: 4px 12px; border-radius: 100px; font-size: 11px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--bd); color: var(--t2);
+}
+.os-pill.hi { background: rgba(59,130,246,.06); border-color: rgba(59,130,246,.2); color: var(--acc2); }
+.install-note {
+  font-size: 11px; color: var(--t3);
+  background: rgba(255,255,255,.02); border: 1px solid var(--bd);
+  border-radius: 8px; padding: 10px 14px; line-height: 1.7;
+  font-family: var(--mono);
+}
+.install-note b { color: var(--acc2); }
+
+/* ─── PLATFORMS ──────────────────────────────────────── */
+.platforms-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 18px; margin-top: 56px;
+}
+.plat-card {
+  background: var(--s1); border: 1px solid var(--bd);
+  border-radius: 16px; padding: 28px 24px;
+  position: relative; overflow: hidden;
+  transition: border-color .25s, background .25s, transform .25s var(--ease);
+}
+.plat-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--acc), var(--pur));
+  transform: scaleX(0); transform-origin: left; transition: transform .35s var(--ease);
+}
+.plat-card:hover { border-color: rgba(59,130,246,.3); background: var(--s2); transform: translateY(-3px); }
+.plat-card:hover::after { transform: scaleX(1); }
+.plat-icon { font-size: 32px; margin-bottom: 14px; }
+.plat-name { font-family: var(--display); font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.plat-sub { font-size: 11px; color: var(--t3); font-family: var(--mono); letter-spacing: .5px; margin-bottom: 18px; }
+.plat-methods { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.plat-method { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--t2); line-height: 1.5; }
+.plat-method::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--acc); flex-shrink: 0; margin-top: 6px; }
+.plat-method span { color: var(--acc2); font-weight: 500; }
+.plat-dl {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: 9px; font-size: 12px; font-weight: 600;
+  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
+  color: var(--acc2); transition: all .2s;
+}
+.plat-dl:hover { background: rgba(59,130,246,.16); border-color: rgba(59,130,246,.4); color: var(--t); }
+
+/* ─── REQUIREMENTS ───────────────────────────────────── */
+.req-list {
+  display: flex; flex-direction: column; gap: 1px;
+  background: var(--bd); border: 1px solid var(--bd);
+  border-radius: 16px; overflow: hidden; margin-top: 48px;
+}
+.req-row {
+  display: flex; align-items: center; gap: 18px;
+  background: var(--bg); padding: 16px 22px; transition: background .2s;
+}
+.req-row:hover { background: var(--s1); }
+.req-icon { font-size: 18px; width: 32px; text-align: center; }
+.req-name { font-weight: 600; font-size: 14px; color: var(--t); min-width: 90px; }
+.req-ver { font-family: var(--mono); font-size: 11px; color: var(--acc2); min-width: 70px; }
+.req-desc { font-size: 13px; color: var(--t2); flex: 1; }
+.req-badge {
+  font-family: var(--mono); font-size: 10px; padding: 3px 11px;
+  border-radius: 100px; white-space: nowrap;
+}
+.req-badge.auto { background: rgba(74,222,128,.07); border: 1px solid rgba(74,222,128,.2); color: var(--green); }
+.req-badge.req  { background: rgba(59,130,246,.07); border: 1px solid rgba(59,130,246,.2); color: var(--acc2); }
+
+/* ─── FOOTER ─────────────────────────────────────────── */
+footer {
+  position: relative; z-index: 2;
+  border-top: 1px solid var(--bd);
+  padding: clamp(28px, 5vh, 44px) clamp(20px, 5vw, 64px);
+}
+.footer-inner {
+  max-width: 1280px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 24px;
+}
+.flogo {
+  font-family: var(--display); font-size: 17px; font-weight: 800;
+  display: flex; align-items: center; gap: 8px;
+}
+.fmid {
+  text-align: center; font-family: var(--mono);
+  font-size: 10px; color: var(--t3); line-height: 1.9; letter-spacing: .5px;
+}
+.flinks { display: flex; gap: 20px; justify-content: flex-end; }
+.flinks a { font-size: 12px; color: var(--t3); transition: color .2s; }
+.flinks a:hover { color: var(--acc2); }
+
+/* ─── RESPONSIVE ─────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 50px; }
+  .hero-left { align-items: center; text-align: center; }
+  .hero-sub { text-align: center; }
+  .hero-stats { justify-content: center; }
+  .hero-right { justify-content: center; }
+  .mockup-float { max-width: 480px; }
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .install-grid { grid-template-columns: 1fr; }
+  .platforms-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-cta.desktop { display: none; }
+  .nav-ham { display: flex; align-items: center; margin-left: auto; }
+  .features-grid { grid-template-columns: 1fr; border-radius: 14px; }
+  .steps-row { grid-template-columns: 1fr; gap: 28px; }
+  .steps-row::before { display: none; }
+  .platforms-grid { grid-template-columns: 1fr; }
+  .footer-inner { grid-template-columns: 1fr; text-align: center; }
+  .flinks { justify-content: center; }
+  .flogo { justify-content: center; }
+  .dd-card { flex-direction: column; }
+  .dd-thumb { width: 100%; min-height: 140px; }
+  .demo-navrow { overflow-x: auto; }
+  .demo-navrow::-webkit-scrollbar { height: 0; }
+  .demo-tabs { gap: 4px; }
+  .dtab { padding: 7px 14px; font-size: 12px; }
+}
+@media (max-width: 600px) {
+  .hero-h1 { letter-spacing: -2px; }
+  .hero-stats { gap: 24px; }
+  .mockup-float { max-width: 100%; }
+  .pl-rows .pl-rowbtn { display: none; }
+  .req-desc { display: none; }
+  .win-body { padding: 10px; }
+  .app-win { font-size: 90%; }
+  .dd-info { padding: 12px; }
+  .mc-badge { display: none; }
+}
+@media (max-width: 380px) {
+  .hero-btns { flex-direction: column; width: 100%; }
+  .btn { justify-content: center; }
+  .hero-stats { gap: 20px; }
+  .hstat-n { font-size: 22px; }
+}
+/* Touch devices - hide custom cursor */
+@media (hover: none) {
+  body { cursor: auto; }
+  #cur-dot, #cur-ring { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── LAYERS ── -->
+<canvas id="bg-canvas"></canvas>
+<div id="aurora">
+  <div class="aurora-blob"></div>
+  <div class="aurora-blob"></div>
+  <div class="aurora-blob"></div>
+  <div class="aurora-blob"></div>
+</div>
+<div id="cur-dot"></div>
+<div id="cur-ring"></div>
+
+<!-- ── NAV ── -->
+<nav id="nav" class="layer">
+  <div class="nav-logo">
+    <div class="nav-dot"></div>Prism
+  </div>
+  <div class="nav-links">
+    <a href="#demo">Demo</a>
+    <a href="#features">Features</a>
+    <a href="#install">Install</a>
+    <a href="#platforms">Platforms</a>
+    <a href="#reqs">Requirements</a>
+  </div>
+  <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="nav-cta desktop">
+    ↓&nbsp; Get Prism
+  </a>
+  <button class="nav-ham" id="nav-ham" aria-label="Menu">☰</button>
+</nav>
+<nav class="nav-mobile-menu layer" id="mob-menu">
+  <a href="#demo" onclick="closeMob()">Demo</a>
+  <a href="#features" onclick="closeMob()">Features</a>
+  <a href="#install" onclick="closeMob()">Install</a>
+  <a href="#platforms" onclick="closeMob()">Platforms</a>
+  <a href="#reqs" onclick="closeMob()">Requirements</a>
+  <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="nav-cta">↓ Get Prism — Free</a>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero" class="layer">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="hero-badge reveal-l">
+        <div class="badge-dot"></div>
+        YouTube Media Suite &nbsp;·&nbsp; v7.3
+      </div>
+      <h1 class="hero-h1 reveal-l" style="transition-delay:.05s">
+        Download<br>
+        <span class="grad">anything.</span><br>
+        Instantly.
+      </h1>
+      <p class="hero-sub reveal-l" style="transition-delay:.1s">
+        A premium desktop app for downloading YouTube videos, audio, playlists and thumbnails — with a handcrafted interface and real-time progress tracking.
+      </p>
+      <div class="hero-btns reveal-l" style="transition-delay:.15s">
+        <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="btn btn-primary">
+          ↓&nbsp; Get Prism &nbsp;<span style="opacity:.5;font-size:11px;font-family:var(--mono)">Free</span>
+        </a>
+        <a href="https://github.com/TheAayan0007/prism" target="_blank" class="btn btn-secondary">
+          GitHub →
+        </a>
+      </div>
+      <div class="hero-stats reveal-l stagger" style="transition-delay:.2s">
+        <div class="hstat">
+          <span class="hstat-n" data-count="8">0</span><span class="hstat-n" style="font-size:20px">K</span>
+          <div class="hstat-l">Max Quality</div>
+        </div>
+        <div class="hstat">
+          <span class="hstat-n" data-count="60">0</span><span class="hstat-n" style="font-size:20px">fps</span>
+          <div class="hstat-l">Frame Rate</div>
+        </div>
+        <div class="hstat">
+          <span class="hstat-n" style="font-size:32px">∞</span>
+          <div class="hstat-l">Playlist Size</div>
+        </div>
+        <div class="hstat">
+          <span class="hstat-n">Free</span>
+          <div class="hstat-l">Always</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right reveal-r" style="transition-delay:.1s">
+      <div class="mockup-float">
+        <div class="mockup-glow"></div>
+        <div class="app-win">
+          <div class="win-titlebar">
+            <div class="win-dot r"></div>
+            <div class="win-dot y"></div>
+            <div class="win-dot g"></div>
+            <div class="win-title">Prism — YouTube Media Suite v7.3</div>
+          </div>
+          <div class="win-logobar">
+            <div class="nav-dot" style="width:7px;height:7px"></div>
+            <div class="win-logo-name">Prism</div>
+            <div class="win-logo-ver">v7.3</div>
+          </div>
+          <div class="win-nav">
+            <div class="win-tab active">Download</div>
+            <div class="win-tab">Playlist</div>
+            <div class="win-tab">Thumbnail</div>
+            <div class="win-tab">History</div>
+          </div>
+          <div class="win-body">
+            <div class="win-search">
+              <span class="win-search-icon">🔗</span>
+              <span class="win-search-text">Paste a YouTube link…</span>
+              <div class="win-fetch">Fetch ↗</div>
+            </div>
+            <div class="win-card">
+              <div class="win-thumb">
+                <span class="win-thumb-play">▶</span>
+                <div class="win-thumb-dur">12:47</div>
+              </div>
+              <div class="win-info">
+                <div class="win-channel">Channel Name</div>
+                <div class="win-vidtitle">Video Title Goes Here — Full Quality</div>
+                <div class="win-tags">
+                  <span class="win-tag hi">1.2M views</span>
+                  <span class="win-tag">48K likes</span>
+                  <span class="win-tag">2024</span>
+                </div>
+                <div class="win-dl-row">
+                  <div class="win-quality">1080p [MP4]</div>
+                  <div class="win-quality">Best Audio</div>
+                  <div class="win-dlbtn">↓ Download</div>
+                </div>
+              </div>
+            </div>
+            <div class="win-prog-wrap">
+              <div class="win-prog-row">
+                <span>Downloading…</span>
+                <span>3.2 MB/s</span>
+              </div>
+              <div class="win-prog-bar">
+                <div class="win-prog-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="sec-divider layer"></div>
+
+<!-- ── DEMO SHOWCASE ── -->
+<section id="demo" class="layer">
+  <div class="section">
+    <div class="demo-header">
+      <div class="sec-label reveal">Demo Showcase</div>
+      <h2 class="sec-h reveal" style="transition-delay:.05s;text-align:center">See it in action.</h2>
+      <p class="sec-sub reveal" style="transition-delay:.1s;text-align:center;max-width:500px;margin:0 auto 32px">
+        Explore every tab of Prism — interactive mockups showing the exact UI you'll use.
+      </p>
+    </div>
+
+    <div class="demo-tabs reveal" style="transition-delay:.15s">
+      <button class="dtab active" onclick="switchTab('download',this)">🎬 Video Download</button>
+      <button class="dtab" onclick="switchTab('playlist',this)">📋 Playlist</button>
+      <button class="dtab" onclick="switchTab('thumbnail',this)">🖼 Thumbnail</button>
+      <button class="dtab" onclick="switchTab('history',this)">📊 History</button>
+    </div>
+
+    <!-- VIDEO DOWNLOAD TAB -->
+    <div class="demo-panel active" id="tab-download">
+      <div class="demo-topbar">
+        <div class="demo-dots">
+          <div class="demo-dot r"></div><div class="demo-dot y"></div><div class="demo-dot g"></div>
+        </div>
+        <div class="demo-winname">Prism — Download</div>
+      </div>
+      <div class="demo-navrow">
+        <div class="demo-navtab on">Download</div>
+        <div class="demo-navtab">Playlist</div>
+        <div class="demo-navtab">Thumbnail</div>
+        <div class="demo-navtab">History</div>
+      </div>
+      <div class="demo-body">
+        <div class="dd-search">
+          <span style="font-size:14px;opacity:.4">🔗</span>
+          <input
+            class="dd-search-input"
+            id="yt-url-input"
+            type="text"
+            placeholder="https://youtube.com/watch?v=..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="dd-search-btn" id="fetch-btn" onclick="fetchVideoInfo()">Fetch ↗</button>
+        </div>
+
+        <!-- Status message -->
+        <div class="dd-status" id="dd-status"></div>
+
+        <div class="dd-card" id="dd-card">
+          <div class="dd-thumb" id="dd-thumb">
+            <span class="dd-play">▶</span>
+            <div class="dd-dur-badge" id="dd-dur">—</div>
+          </div>
+          <div class="dd-info">
+            <div class="dd-channel" id="dd-channel">Channel Name</div>
+            <div class="dd-title" id="dd-title">Video Title</div>
+            <div class="dd-tags" id="dd-tags">
+              <span class="dd-tag hi">— views</span>
+              <span class="dd-tag hi">— likes</span>
+              <span class="dd-tag">📅 —</span>
+            </div>
+            <div class="dd-pills">
+              <div class="dd-pill on">Video + Audio</div>
+              <div class="dd-pill">Audio Only</div>
+              <div class="dd-pill">Video Only</div>
+            </div>
+            <div class="dd-bottom">
+              <div class="dd-select">1080p [MP4]</div>
+              <div class="dd-select">Best Audio</div>
+              <button class="dd-dlbtn" id="dl-btn" onclick="downloadTxt()" disabled>↓  Download</button>
+            </div>
+          </div>
+        </div>
+        <div class="dd-prog-area">
+          <div class="dd-prog-row">
+            <span id="prog-label">Waiting…</span>
+            <span id="dl-pct">0%</span>
+          </div>
+          <div class="dd-prog-track">
+            <div class="dd-prog-fill" id="dl-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYLIST TAB -->
+    <div class="demo-panel" id="tab-playlist">
+      <div class="demo-topbar">
+        <div class="demo-dots">
+          <div class="demo-dot r"></div><div class="demo-dot y"></div><div class="demo-dot g"></div>
+        </div>
+        <div class="demo-winname">Prism — Playlist</div>
+      </div>
+      <div class="demo-navrow">
+        <div class="demo-navtab">Download</div>
+        <div class="demo-navtab on">Playlist</div>
+        <div class="demo-navtab">Thumbnail</div>
+        <div class="demo-navtab">History</div>
+      </div>
+      <div class="demo-body">
+        <div class="pl-stats stagger">
+          <div class="pl-stat"><div class="pl-stat-n">24</div><div class="pl-stat-l">Total</div></div>
+          <div class="pl-stat"><div class="pl-stat-n" style="color:var(--t)">24</div><div class="pl-stat-l">Loaded</div></div>
+          <div class="pl-stat"><div class="pl-stat-n">18</div><div class="pl-stat-l">Selected</div></div>
+          <div class="pl-stat" style="margin-left:auto"><div class="pl-stat-n" style="color:var(--green)">6</div><div class="pl-stat-l">Done</div></div>
+        </div>
+        <div class="pl-rows">
+          <div class="pl-row">
+            <div class="pl-chk"><span class="pl-chk-tick">✓</span></div>
+            <div class="pl-idx">01</div>
+            <div class="pl-mini-thumb">▶</div>
+            <div style="flex:1"><div class="pl-vtitle">Intro to Machine Learning — Full Course</div><div class="pl-vmeta">⏱ 1:24:33  ·  👁 2.1M  ·  💾 ~1.2 GB</div></div>
+            <div class="pl-rowbtn done">✓  Done</div>
+          </div>
+          <div class="pl-row">
+            <div class="pl-chk"><span class="pl-chk-tick">✓</span></div>
+            <div class="pl-idx">02</div>
+            <div class="pl-mini-thumb">▶</div>
+            <div style="flex:1"><div class="pl-vtitle">Neural Networks Explained Simply</div><div class="pl-vmeta">⏱ 28:14  ·  👁 890K  ·  💾 ~320 MB</div></div>
+            <div class="pl-rowbtn">↓ 64%</div>
+          </div>
+          <div class="pl-row">
+            <div class="pl-chk"><span class="pl-chk-tick">✓</span></div>
+            <div class="pl-idx">03</div>
+            <div class="pl-mini-thumb">▶</div>
+            <div style="flex:1"><div class="pl-vtitle">Deep Learning with PyTorch — Part 1</div><div class="pl-vmeta">⏱ 45:07  ·  👁 1.4M  ·  💾 ~510 MB</div></div>
+            <div class="pl-rowbtn">↓ Download</div>
+          </div>
+          <div class="pl-row" style="opacity:.5">
+            <div class="pl-chk" style="background:transparent;border-color:var(--bd2)"></div>
+            <div class="pl-idx">04</div>
+            <div class="pl-mini-thumb">▶</div>
+            <div style="flex:1"><div class="pl-vtitle">Transformers: Attention Is All You Need</div><div class="pl-vmeta">⏱ 1:02:18  ·  👁 3.2M  ·  💾 ~760 MB</div></div>
+            <div class="pl-rowbtn">↓ Download</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THUMBNAIL TAB -->
+    <div class="demo-panel" id="tab-thumbnail">
+      <div class="demo-topbar">
+        <div class="demo-dots">
+          <div class="demo-dot r"></div><div class="demo-dot y"></div><div class="demo-dot g"></div>
+        </div>
+        <div class="demo-winname">Prism — Thumbnail Extractor</div>
+      </div>
+      <div class="demo-navrow">
+        <div class="demo-navtab">Download</div>
+        <div class="demo-navtab">Playlist</div>
+        <div class="demo-navtab on">Thumbnail</div>
+        <div class="demo-navtab">History</div>
+      </div>
+      <div class="demo-body">
+        <div class="dd-search" style="margin-bottom:18px">
+          <span style="font-size:14px;opacity:.4">🖼</span>
+          <div class="dd-search-txt" style="font-size:13px;color:var(--t3);font-family:var(--mono);flex:1">Paste video URL…</div>
+          <div class="dd-search-btn" style="cursor:default">Fetch ↗</div>
+        </div>
+        <div class="tb-card">
+          <div class="tb-img">
+            <div class="tb-img-inner">
+              <span class="tb-play-big">▶</span>
+              <div style="font-size:12px;color:var(--t3);margin-top:8px;font-family:var(--mono)">1920 × 1080</div>
+            </div>
+            <div class="tb-res-badge">1920 × 1080  ·  JPEG</div>
+          </div>
+          <div class="tb-info-row">
+            <div class="tb-title-txt">Rick Astley — Never Gonna Give You Up</div>
+            <div class="tb-dlbtns">
+              <div class="tb-dlbtn-jpg">↓  JPG</div>
+              <div class="tb-dlbtn-png">↓  PNG</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div class="demo-panel" id="tab-history">
+      <div class="demo-topbar">
+        <div class="demo-dots">
+          <div class="demo-dot r"></div><div class="demo-dot y"></div><div class="demo-dot g"></div>
+        </div>
+        <div class="demo-winname">Prism — Download History</div>
+      </div>
+      <div class="demo-navrow">
+        <div class="demo-navtab">Download</div>
+        <div class="demo-navtab">Playlist</div>
+        <div class="demo-navtab">Thumbnail</div>
+        <div class="demo-navtab on">History</div>
+      </div>
+      <div class="demo-body">
+        <div class="hist-header">
+          <div class="hist-title">Download History</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--t3)">3 downloads</span>
+            <div class="hist-clear">🗑 Clear All</div>
+          </div>
+        </div>
+        <div class="hist-cards">
+          <div class="hist-card">
+            <div class="hist-thumb">▶</div>
+            <div class="hist-info">
+              <div class="hist-vtitle">Rick Astley — Never Gonna Give You Up</div>
+              <div class="hist-meta">⏱ 3:33  ·  📁 Never_Gonna.mp4</div>
+            </div>
+            <div class="hist-date">2024-01-15 14:22</div>
+          </div>
+          <div class="hist-card">
+            <div class="hist-thumb">▶</div>
+            <div class="hist-info">
+              <div class="hist-vtitle">Intro to Machine Learning — Full Course</div>
+              <div class="hist-meta">⏱ 1:24:33  ·  📁 ML_Course.mp4</div>
+            </div>
+            <div class="hist-date">2024-01-15 12:08</div>
+          </div>
+          <div class="hist-card">
+            <div class="hist-thumb">▶</div>
+            <div class="hist-info">
+              <div class="hist-vtitle">Lo-fi Hip Hop — Playlist (24 videos)</div>
+              <div class="hist-meta">⏱ 48:12 avg  ·  📁 /Music/Lofi/</div>
+            </div>
+            <div class="hist-date">2024-01-14 21:40</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="sec-divider layer"></div>
+
+<!-- ── FEATURES ── -->
+<section id="features" class="layer">
+  <div class="section">
+    <div class="sec-label reveal">Features</div>
+    <h2 class="sec-h reveal" style="transition-delay:.05s">Everything built in.</h2>
+    <p class="sec-sub reveal" style="transition-delay:.1s">No plugins, no extensions, no subscriptions — just one app that does it all.</p>
+
+    <div class="features-grid stagger">
+      <div class="fc">
+        <div class="fc-icon">🎬</div>
+        <div class="fc-title">Video Download</div>
+        <div class="fc-desc">Paste any YouTube URL. Fetches all metadata, format options and thumbnail. Download from 8K all the way down to 360p.</div>
+        <span class="fc-chip">Core</span>
+      </div>
+      <div class="fc">
+        <div class="fc-icon">🎵</div>
+        <div class="fc-title">Audio Only</div>
+        <div class="fc-desc">Extract high-bitrate audio streams with full language track selection. Perfect for music, podcasts and lectures.</div>
+        <span class="fc-chip">Audio</span>
+      </div>
+      <div class="fc">
+        <div class="fc-icon">📋</div>
+        <div class="fc-title">Playlist Batch</div>
+        <div class="fc-desc">Load entire playlists, pick individual videos, choose quality per-video and batch-download with a live queue manager.</div>
+        <span class="fc-chip">Batch</span>
+      </div>
+      <div class="fc">
+        <div class="fc-icon">🖼</div>
+        <div class="fc-title">Thumbnail Extractor</div>
+        <div class="fc-desc">Download the highest-resolution thumbnail from any video in JPG or PNG format at full native resolution.</div>
+        <span class="fc-chip">JPG / PNG</span>
+      </div>
+      <div class="fc">
+        <div class="fc-icon">📊</div>
+        <div class="fc-title">Download History</div>
+        <div class="fc-desc">Every download logged with title, duration, save path and timestamp. Persists in a local JSON file — no cloud needed.</div>
+        <span class="fc-chip">Persistent</span>
+      </div>
+      <div class="fc">
+        <div class="fc-icon">⚡</div>
+        <div class="fc-title">Real-time Progress</div>
+        <div class="fc-desc">Live speed meter, percentage and animated progress bars per video and for the overall batch. Fully non-blocking UI.</div>
+        <span class="fc-chip">Live</span>
+      </div>
+      <div class="fc">
+        <div class="fc-icon">🎛</div>
+        <div class="fc-title">Format Control</div>
+        <div class="fc-desc">Video+Audio, Audio Only or Video Only. Choose quality, frame rate and language from smart format dropdowns.</div>
+        <span class="fc-chip">Control</span>
+      </div>
+      <div class="fc">
+        <div class="fc-icon">🎨</div>
+        <div class="fc-title">Custom UI</div>
+        <div class="fc-desc">Animated background, cursor glow, colour pickers, nav bar position toggle — everything saved to preferences automatically.</div>
+        <span class="fc-chip">Personalise</span>
+      </div>
+      <div class="fc">
+        <div class="fc-icon">🔒</div>
+        <div class="fc-title">100% Local & Private</div>
+        <div class="fc-desc">No accounts, no analytics, no cloud. Everything runs offline. Downloads go directly to your chosen folder — always.</div>
+        <span class="fc-chip">Private</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="sec-divider layer"></div>
+
+<!-- ── HOW IT WORKS ── -->
+<section id="how" class="layer">
+  <div class="section">
+    <div class="sec-label reveal" style="justify-content:center">How It Works</div>
+    <h2 class="sec-h reveal" style="transition-delay:.05s;text-align:center">Three steps.<br>That's all.</h2>
+
+    <div class="steps-row stagger">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-title">Paste URL</div>
+        <div class="step-desc">Copy any YouTube video or playlist link and paste it into the search bar.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-title">Choose Quality</div>
+        <div class="step-desc">Pick your resolution, audio quality, format and language from the dropdowns.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-title">Download</div>
+        <div class="step-desc">Hit download and watch live progress as the file saves directly to your folder.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="sec-divider layer"></div>
+
+<!-- ── INSTALL ── -->
+<section id="install" class="layer">
+  <div class="section">
+    <div class="sec-label reveal">Installation</div>
+    <h2 class="sec-h reveal" style="transition-delay:.05s">Two ways<br>to install.</h2>
+    <p class="sec-sub reveal" style="transition-delay:.1s">Python method works on every platform. The EXE is Windows one-click.</p>
+
+    <div class="install-grid">
+      <div class="method-card reveal" style="transition-delay:.05s">
+        <div class="mc-head">
+          <div class="mc-num">01</div>
+          <div class="mc-title">Python Method</div>
+          <div class="mc-badge">ALL PLATFORMS</div>
+        </div>
+        <div class="mc-body">
+          <div class="step-row">
+            <div class="snum">1</div>
+            <div class="step-text">
+              <strong>Clone the repository</strong>
+              <span>Get source code from GitHub</span>
+            </div>
+          </div>
+          <div class="cmd-box">
+            <div><span class="cmd-pr">$</span>git clone https://github.com/TheAayan0007/prism</div>
+            <button class="cpbtn" onclick="cp(this,'git clone https://github.com/TheAayan0007/prism')">Copy</button>
+          </div>
+          <div class="step-row">
+            <div class="snum">2</div>
+            <div class="step-text">
+              <strong>Run the installer</strong>
+              <span>Auto-installs PyQt6, yt-dlp, FFmpeg and all dependencies</span>
+            </div>
+          </div>
+          <div class="cmd-box">
+            <div><span class="cmd-pr">$</span>python installer.py</div>
+            <button class="cpbtn" onclick="cp(this,'python installer.py')">Copy</button>
+          </div>
+          <div class="step-row">
+            <div class="snum">3</div>
+            <div class="step-text">
+              <strong>Launch Prism</strong>
+              <span>Run after a successful installation</span>
+            </div>
+          </div>
+          <div class="cmd-box">
+            <div><span class="cmd-pr">$</span>python main.py</div>
+            <button class="cpbtn" onclick="cp(this,'python main.py')">Copy</button>
+          </div>
+          <div class="os-pills">
+            <div class="os-pill hi">Windows</div>
+            <div class="os-pill hi">macOS</div>
+            <div class="os-pill hi">Linux</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="method-card reveal" style="transition-delay:.1s">
+        <div class="mc-head">
+          <div class="mc-num">02</div>
+          <div class="mc-title">Executable Method</div>
+          <div class="mc-badge">WINDOWS ONLY</div>
+        </div>
+        <div class="mc-body">
+          <div class="step-row">
+            <div class="snum">1</div>
+            <div class="step-text">
+              <strong>Download <code style="color:var(--acc2);font-family:var(--mono)">installer.exe</code></strong>
+              <span>Sets up all required runtimes — run this first</span>
+            </div>
+          </div>
+          <div class="step-row">
+            <div class="snum">2</div>
+            <div class="step-text">
+              <strong>Download <code style="color:var(--acc2);font-family:var(--mono)">Prism.exe</code></strong>
+              <span>The main app — double-click to launch and start downloading immediately</span>
+            </div>
+          </div>
+          <a href="https://github.com/TheAayan0007/prism/releases" target="_blank"
+             class="btn btn-primary" style="justify-content:center;font-size:13px;padding:11px 22px">
+            ↓&nbsp; Go to Releases
+          </a>
+          <div class="install-note">
+            <b>Note:</b> Always run <b>installer.exe</b> before <b>Prism.exe</b> to ensure all components are properly set up. Windows Defender may require a SmartScreen bypass — click "More info → Run anyway".
+          </div>
+          <div class="os-pills">
+            <div class="os-pill hi">Windows 10</div>
+            <div class="os-pill hi">Windows 11</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="sec-divider layer"></div>
+
+<!-- ── PLATFORMS ── -->
+<section id="platforms" class="layer">
+  <div class="section">
+    <div class="sec-label reveal">Platform Support</div>
+    <h2 class="sec-h reveal" style="transition-delay:.05s">Runs everywhere<br>you work.</h2>
+    <p class="sec-sub reveal" style="transition-delay:.1s">Native support across Windows, Linux distributions and macOS — Intel and Apple Silicon.</p>
+
+    <div class="platforms-grid stagger">
+      <div class="plat-card">
+        <div class="plat-icon">🪟</div>
+        <div class="plat-name">Windows</div>
+        <div class="plat-sub">10 / 11 · x64</div>
+        <div class="plat-methods">
+          <div class="plat-method"><span>Method 1:</span> Python + installer.py + main.py</div>
+          <div class="plat-method"><span>Method 2:</span> installer.exe + Prism.exe from Releases</div>
+        </div>
+        <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="plat-dl">↓ Download .exe</a>
+      </div>
+      <div class="plat-card">
+        <div class="plat-icon">🐧</div>
+        <div class="plat-name">Linux</div>
+        <div class="plat-sub">Kali · Parrot · Ubuntu · Debian</div>
+        <div class="plat-methods">
+          <div class="plat-method"><span>Python:</span> installer.py + main.py — works on all distros</div>
+          <div class="plat-method"><span>Kali OS:</span> Pre-built binary available in Releases</div>
+          <div class="plat-method"><span>Parrot OS:</span> Pre-built binary available in Releases</div>
+        </div>
+        <a href="https://github.com/TheAayan0007/prism/releases" target="_blank" class="plat-dl">↓ Download for Linux</a>
+      </div>
+      <div class="plat-card">
+        <div class="plat-icon">🍎</div>
+        <div class="plat-name">macOS</div>
+        <div class="plat-sub">Intel &amp; Apple Silicon (M1/M2/M3)</div>
+        <div class="plat-methods">
+          <div class="plat-method"><span>Python:</span> installer.py + main.py</div>
+          <div class="plat-method">FFmpeg auto-installed via Homebrew if missing</div>
+        </div>
+        <a href="https://github.com/TheAayan0007/prism" target="_blank" class="plat-dl">View Source →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="sec-divider layer"></div>
+
+<!-- ── REQUIREMENTS ── -->
+<section id="reqs" class="layer">
+  <div class="section">
+    <div class="sec-label reveal">Requirements</div>
+    <h2 class="sec-h reveal" style="transition-delay:.05s">What you need.</h2>
+    <p class="sec-sub reveal" style="transition-delay:.1s">installer.py handles every dependency automatically — this is just for your reference.</p>
+
+    <div class="req-list reveal stagger" style="transition-delay:.15s">
+      <div class="req-row">
+        <div class="req-icon">🐍</div>
+        <div class="req-name">Python</div>
+        <div class="req-ver">3.10+</div>
+        <div class="req-desc">Runtime for Prism — installer guides upgrade if needed</div>
+        <div class="req-badge req">Required</div>
+      </div>
+      <div class="req-row">
+        <div class="req-icon">🖼</div>
+        <div class="req-name">PyQt6</div>
+        <div class="req-ver">Latest</div>
+        <div class="req-desc">GUI framework powering the entire Prism interface</div>
+        <div class="req-badge auto">Auto-install</div>
+      </div>
+      <div class="req-row">
+        <div class="req-icon">📥</div>
+        <div class="req-name">yt-dlp</div>
+        <div class="req-ver">Latest</div>
+        <div class="req-desc">Download engine — supports thousands of platforms beyond YouTube</div>
+        <div class="req-badge auto">Auto-install</div>
+      </div>
+      <div class="req-row">
+        <div class="req-icon">🎨</div>
+        <div class="req-name">Pillow</div>
+        <div class="req-ver">Latest</div>
+        <div class="req-desc">Image processing for thumbnails and format conversion</div>
+        <div class="req-badge auto">Auto-install</div>
+      </div>
+      <div class="req-row">
+        <div class="req-icon">🌐</div>
+        <div class="req-name">requests</div>
+        <div class="req-ver">Latest</div>
+        <div class="req-desc">HTTP library for fetching thumbnails and media data</div>
+        <div class="req-badge auto">Auto-install</div>
+      </div>
+      <div class="req-row">
+        <div class="req-icon">🎞</div>
+        <div class="req-name">FFmpeg</div>
+        <div class="req-ver">5.0+</div>
+        <div class="req-desc">Video/audio merging — auto-downloaded and added to PATH</div>
+        <div class="req-badge auto">Auto-install</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="sec-divider layer"></div>
+
+<!-- ── FOOTER ── -->
+<footer class="layer">
+  <div class="footer-inner">
+    <div class="flogo"><div class="nav-dot"></div>Prism</div>
+    <div class="fmid">
+      YOUTUBE MEDIA SUITE · V7.3<br>
+      OPEN SOURCE · FREE FOREVER · 100% LOCAL
+    </div>
+    <div class="flinks">
+      <a href="https://github.com/TheAayan0007/prism" target="_blank">GitHub</a>
+      <a href="https://github.com/TheAayan0007/prism/releases" target="_blank">Releases</a>
+      <a href="#install">Install</a>
+      <a href="#features">Features</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ── SCRIPTS ── -->
+<script>
+/* ─── CURSOR ──────────────────────────── */
+const dot = document.getElementById('cur-dot');
+const ring = document.getElementById('cur-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  dot.style.left = mx + 'px'; dot.style.top = my + 'px';
+});
+(function loop() {
+  rx += (mx - rx) * .12; ry += (my - ry) * .12;
+  ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+  requestAnimationFrame(loop);
+})();
+document.querySelectorAll('a, button, .dtab, .fc, .plat-card, .pl-row').forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('cursor-big'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-big'));
+});
+
+/* ─── CANVAS BACKGROUND ───────────────── */
+const cv = document.getElementById('bg-canvas');
+const ctx = cv.getContext('2d');
+let W, H, ox = 0, oy = 0, particles = [];
+
+function resize() {
+  W = cv.width = innerWidth; H = cv.height = innerHeight;
+  initParticles();
+}
+function initParticles() {
+  particles = [];
+  const n = Math.floor((W * H) / 28000);
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25,
+      r: Math.random() * 1.2 + .4,
+      a: Math.random() * .4 + .1,
+      hue: Math.random() > .5 ? 220 : 270,
+    });
+  }
+}
+resize(); addEventListener('resize', resize);
+
+(function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.022)'; ctx.lineWidth = .5;
+  const S = 52, tx = (-ox % S + S) % S, ty = (-oy % S + S) % S;
+  ctx.beginPath();
+  for (let x = tx - S; x < W + S; x += S) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+  for (let y = ty - S; y < H + S; y += S) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+  ctx.stroke();
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${p.hue}, 70%, 65%, ${p.a})`;
+    ctx.fill();
+  }
+  ox += .16; oy += .09;
+  requestAnimationFrame(draw);
+})();
+
+/* ─── NAV SCROLL ──────────────────────── */
+const nav = document.getElementById('nav');
+addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 30));
+
+/* ─── MOBILE MENU ─────────────────────── */
+const ham = document.getElementById('nav-ham');
+const mob = document.getElementById('mob-menu');
+ham.addEventListener('click', () => mob.classList.toggle('open'));
+function closeMob() { mob.classList.remove('open'); }
+
+/* ─── REVEAL ON SCROLL ────────────────── */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: .07 });
+
+document.querySelectorAll('.reveal, .reveal-l, .reveal-r, .stagger').forEach(el => io.observe(el));
+
+/* ─── COUNTER ANIMATION ───────────────── */
+const counterIO = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.querySelectorAll('[data-count]').forEach(el => {
+      const target = +el.dataset.count;
+      let cur = 0;
+      const inc = target / 40;
+      const timer = setInterval(() => {
+        cur = Math.min(cur + inc, target);
+        el.textContent = Math.round(cur);
+        if (cur >= target) clearInterval(timer);
+      }, 30);
+    });
+    counterIO.unobserve(e.target);
+  });
+}, { threshold: .5 });
+document.querySelectorAll('.hero-stats').forEach(el => counterIO.observe(el));
+
+/* ─── DEMO TAB SWITCHER ───────────────── */
+function switchTab(id, btn) {
+  document.querySelectorAll('.demo-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.dtab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ─── COPY COMMAND ────────────────────── */
+function cp(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const t = btn.textContent; btn.textContent = '✓ Copied'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = t; btn.classList.remove('ok'); }, 1800);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const t = btn.textContent; btn.textContent = '✓ Copied'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = t; btn.classList.remove('ok'); }, 1800);
+  });
+}
+
+/* ─── SMOOTH ANCHOR CLOSE MOB ─────────── */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', () => mob.classList.remove('open'));
+});
+
+/* ─── ENTER KEY ON INPUT ──────────────── */
+document.getElementById('yt-url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fetchVideoInfo();
+});
+
+/* ─── VIDEO INFO STATE ────────────────── */
+let currentVideoData = null;
+
+/* ─── UTILITY HELPERS ─────────────────── */
+function extractVideoId(url) {
+  try {
+    const u = new URL(url);
+    // Standard watch URL
+    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+      return u.searchParams.get('v');
+    }
+    // Short URL: youtu.be/ID
+    if (u.hostname === 'youtu.be') {
+      return u.pathname.slice(1).split('?')[0];
+    }
+    // Embed URL
+    const embedMatch = u.pathname.match(/\/embed\/([^/?]+)/);
+    if (embedMatch) return embedMatch[1];
+    // Shorts URL
+    const shortsMatch = u.pathname.match(/\/shorts\/([^/?]+)/);
+    if (shortsMatch) return shortsMatch[1];
+  } catch (_) {}
+  // Fallback: grab v= from raw string
+  const m = url.match(/[?&]v=([^&]{11})/);
+  return m ? m[1] : null;
+}
+
+function formatNumber(n) {
+  n = parseInt(n, 10);
+  if (isNaN(n)) return '—';
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return n.toString();
+}
+
+function formatDuration(iso) {
+  // ISO 8601 duration: PT1H2M3S
+  if (!iso) return '—';
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return '—';
+  const h = parseInt(m[1] || 0), min = parseInt(m[2] || 0), sec = parseInt(m[3] || 0);
+  if (h > 0) return `${h}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${min}:${String(sec).padStart(2,'0')}`;
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('dd-status');
+  el.textContent = msg;
+  el.className = 'dd-status ' + type;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('dl-fill').style.width = pct + '%';
+  document.getElementById('dl-pct').textContent = pct + '%';
+  document.getElementById('prog-label').textContent = label;
+}
+
+/* ─── FETCH VIDEO INFO ────────────────── */
+async function fetchVideoInfo() {
+  const rawUrl = document.getElementById('yt-url-input').value.trim();
+  if (!rawUrl) { setStatus('⚠ Please paste a YouTube URL first.', 'error'); return; }
+
+  const videoId = extractVideoId(rawUrl);
+  if (!videoId) { setStatus('⚠ Could not find a video ID in that URL. Make sure it\'s a valid YouTube link.', 'error'); return; }
+
+  const fetchBtn = document.getElementById('fetch-btn');
+  const dlBtn = document.getElementById('dl-btn');
+  fetchBtn.disabled = true;
+  dlBtn.disabled = true;
+  setStatus('⏳ Fetching video info…', 'loading');
+  setProgress(0, 'Fetching…');
+
+  const apiKey = 'AIzaSyDnl9MoN6ZOoGYhDrecD1cAE4mNBCT2SSc';
+
+  try {
+    // ── Step 1: Fetch video data ──
+    const videoRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`
+    );
+    const videoData = await videoRes.json();
+
+    if (!videoData.items || videoData.items.length === 0) {
+      setStatus('❌ Video not found. It may be private, deleted, or the URL is incorrect.', 'error');
+      fetchBtn.disabled = false;
+      setProgress(0, 'Waiting…');
+      return;
+    }
+
+    setProgress(50, 'Fetching channel info…');
+
+    const item = videoData.items[0];
+    const snippet = item.snippet;
+    const stats = item.statistics;
+    const contentDetails = item.contentDetails;
+    const channelId = snippet.channelId;
+
+    // ── Step 2: Fetch channel data ──
+    const channelRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${apiKey}`
+    );
+    const channelData = await channelRes.json();
+
+    let channelName = snippet.channelTitle || '[unknown]';
+    let channelUrl = `https://www.youtube.com/channel/${channelId}`;
+    let country = '[not found]';
+
+    if (channelData.items && channelData.items.length > 0) {
+      const ch = channelData.items[0];
+      channelName = ch.snippet.title || channelName;
+      country = ch.snippet.country || '[not found]';
+    }
+
+    setProgress(80, 'Building preview…');
+
+    // ── Store for download ──
+    currentVideoData = {
+      title: snippet.title || '[not found]',
+      channelName,
+      channelUrl,
+      country,
+      videoUrl: rawUrl,
+      videoId,
+      publishedAt: snippet.publishedAt || '[not found]',
+      description: snippet.description || '[not found]',
+      views: stats?.viewCount || '0',
+      likes: stats?.likeCount || '0',
+      duration: contentDetails?.duration || '',
+      thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    };
+
+    // ── Update UI ──
+    document.getElementById('dd-title').textContent = currentVideoData.title;
+    document.getElementById('dd-channel').textContent = channelName.toUpperCase();
+    document.getElementById('dd-dur').textContent = formatDuration(currentVideoData.duration);
+
+    // Tags
+    const pub = currentVideoData.publishedAt ? currentVideoData.publishedAt.slice(0,10) : '—';
+    document.getElementById('dd-tags').innerHTML = `
+      <span class="dd-tag hi">👁 ${formatNumber(currentVideoData.views)} views</span>
+      <span class="dd-tag hi">👍 ${formatNumber(currentVideoData.likes)} likes</span>
+      <span class="dd-tag">📅 ${pub}</span>
+    `;
+
+    // Thumbnail
+    const thumbEl = document.getElementById('dd-thumb');
+    thumbEl.innerHTML = `<img src="${currentVideoData.thumbnail}" alt="thumbnail" onerror="this.style.display='none'"><span class="dd-play" style="position:relative;z-index:1">▶</span><div class="dd-dur-badge">${formatDuration(currentVideoData.duration)}</div>`;
+
+    document.getElementById('dd-card').classList.add('loaded');
+    setProgress(100, '✓ Ready to download');
+    setStatus('✅ Video info loaded! Click ↓ Download to save the details as a .txt file.', 'success');
+    dlBtn.disabled = false;
+
+  } catch (err) {
+    setStatus('❌ Error: ' + err.message, 'error');
+    setProgress(0, 'Error');
+  } finally {
+    fetchBtn.disabled = false;
+  }
+}
+
+/* ─── DOWNLOAD TXT ────────────────────── */
+function downloadTxt() {
+  if (!currentVideoData) return;
+
+  const data = `TITLE: ${currentVideoData.title}
+CHANNEL URL: ${currentVideoData.channelUrl}
+CHANNEL NAME: ${currentVideoData.channelName}
+COUNTRY: ${currentVideoData.country}
+UPLOADED DATE: ${currentVideoData.publishedAt}
+VIDEO URL: ${currentVideoData.videoUrl}
+VIEWS: ${currentVideoData.views}
+LIKES: ${currentVideoData.likes}
+DESCRIPTION:
+${currentVideoData.description}`;
+
+  // Sanitise filename
+  const safeName = currentVideoData.title.replace(/[\\/:*?"<>|]/g, '_').slice(0, 120);
+  const filename = safeName + '.txt';
+
+  const blob = new Blob([data], { type: 'text/plain' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+
+  // Animate progress bar as "downloading"
+  setProgress(0, 'Saving file…');
+  let p = 0;
+  const t = setInterval(() => {
+    p = Math.min(p + 8, 100);
+    document.getElementById('dl-fill').style.width = p + '%';
+    document.getElementById('dl-pct').textContent = p + '%';
+    if (p >= 100) {
+      clearInterval(t);
+      document.getElementById('prog-label').textContent = '✓ Saved!';
+      setStatus('✅ Downloaded as "' + filename + '"', 'success');
+    }
+  }, 30);
+}
+</script>
+</body>
+</html>
