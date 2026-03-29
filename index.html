@@ -585,36 +585,26 @@ nav.scrolled {
   border-radius: 18px; padding: 12px 20px;
   display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
 }
-.dd-search-input {
-  flex: 1; font-size: 13px; color: var(--t); font-family: var(--mono);
-  background: transparent; border: none; outline: none;
-}
-.dd-search-input::placeholder { color: var(--t3); }
+.dd-search-txt { flex: 1; font-size: 13px; color: var(--t3); font-family: var(--mono); }
 .dd-search-btn {
   background: linear-gradient(135deg, var(--acc-d), var(--acc));
   color: #fff; font-size: 12px; font-weight: 700;
-  padding: 8px 20px; border-radius: 12px; cursor: none;
-  transition: all .2s; white-space: nowrap; flex-shrink: 0;
+  padding: 8px 20px; border-radius: 12px;
 }
-.dd-search-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,130,246,.4); }
-.dd-search-btn:disabled { opacity: .5; cursor: none; transform: none; }
 .dd-card {
   background: rgba(14,14,22,.7);
   border: 1px solid rgba(255,255,255,.06);
   border-radius: 16px; overflow: hidden; display: flex;
-  transition: border-color .3s;
 }
-.dd-card.loaded { border-color: rgba(59,130,246,.2); }
 .dd-thumb {
   width: 200px; flex-shrink: 0;
   background: linear-gradient(160deg, #0a0d18, #12082a, #0d1420);
   display: flex; align-items: center; justify-content: center;
-  position: relative; min-height: 130px; overflow: hidden;
+  position: relative; min-height: 130px;
 }
-.dd-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
-.dd-play { font-size: 32px; opacity: .2; position: relative; z-index: 1; }
+.dd-play { font-size: 32px; opacity: .2; }
 .dd-dur-badge {
-  position: absolute; bottom: 8px; right: 8px; z-index: 2;
+  position: absolute; bottom: 8px; right: 8px;
   font-family: var(--mono); font-size: 10px; color: var(--t);
   background: rgba(0,0,0,.75); border: 1px solid rgba(255,255,255,.08);
   border-radius: 5px; padding: 3px 7px;
@@ -644,37 +634,18 @@ nav.scrolled {
   margin-left: auto;
   background: linear-gradient(135deg, var(--acc-d), var(--acc));
   color: #fff; font-size: 12px; font-weight: 700;
-  padding: 8px 22px; border-radius: 9px; cursor: none;
-  transition: all .2s; white-space: nowrap;
+  padding: 8px 22px; border-radius: 9px;
 }
-.dd-dlbtn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(59,130,246,.4); }
-.dd-dlbtn:disabled { opacity: .4; transform: none; cursor: none; }
 .dd-prog-area { padding: 0 20px 16px; }
 .dd-prog-row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--t2); margin-bottom: 5px; }
 .dd-prog-track { height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
 .dd-prog-fill {
-  height: 100%; border-radius: 2px; width: 0%;
+  height: 100%; border-radius: 2px;
   background: linear-gradient(90deg, var(--acc-d), var(--acc));
-  transition: width .4s ease;
+  animation: prog-demo 5s ease-in-out infinite;
 }
-
-/* status / error message */
-.dd-status {
-  font-family: var(--mono); font-size: 11px; padding: 8px 14px;
-  border-radius: 8px; margin-bottom: 14px;
-  display: none;
-}
-.dd-status.loading {
-  display: block; color: var(--acc2);
-  background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2);
-}
-.dd-status.error {
-  display: block; color: #ff6080;
-  background: rgba(255,77,109,.06); border: 1px solid rgba(255,77,109,.2);
-}
-.dd-status.success {
-  display: block; color: var(--green);
-  background: rgba(74,222,128,.06); border: 1px solid rgba(74,222,128,.2);
+@keyframes prog-demo {
+  0% { width: 0%; } 60% { width: 72%; } 80% { width: 72%; } 100% { width: 0%; }
 }
 
 /* Playlist demo */
@@ -1101,7 +1072,7 @@ footer {
       </div>
       <h1 class="hero-h1 reveal-l" style="transition-delay:.05s">
         Download<br>
-        <span class="grad">Any Youtube Video.</span><br>
+        <span class="grad">anything.</span><br>
         Instantly.
       </h1>
       <p class="hero-sub reveal-l" style="transition-delay:.1s">
@@ -1234,32 +1205,22 @@ footer {
       <div class="demo-body">
         <div class="dd-search">
           <span style="font-size:14px;opacity:.4">🔗</span>
-          <input
-            class="dd-search-input"
-            id="yt-url-input"
-            type="text"
-            placeholder="https://youtube.com/watch?v=..."
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <button class="dd-search-btn" id="fetch-btn" onclick="fetchVideoInfo()">Fetch ↗</button>
+          <div class="dd-search-txt">https://youtube.com/watch?v=dQw4w9WgXcQ</div>
+          <div class="dd-search-btn">Fetch ↗</div>
         </div>
-
-        <!-- Status message -->
-        <div class="dd-status" id="dd-status"></div>
-
-        <div class="dd-card" id="dd-card">
-          <div class="dd-thumb" id="dd-thumb">
+        <div class="dd-card">
+          <div class="dd-thumb">
             <span class="dd-play">▶</span>
-            <div class="dd-dur-badge" id="dd-dur">—</div>
+            <div class="dd-dur-badge">3:33</div>
           </div>
           <div class="dd-info">
-            <div class="dd-channel" id="dd-channel">Channel Name</div>
-            <div class="dd-title" id="dd-title">Video Title</div>
-            <div class="dd-tags" id="dd-tags">
-              <span class="dd-tag hi">— views</span>
-              <span class="dd-tag hi">— likes</span>
-              <span class="dd-tag">📅 —</span>
+            <div class="dd-channel">Rick Astley</div>
+            <div class="dd-title">Rick Astley — Never Gonna Give You Up</div>
+            <div class="dd-tags">
+              <span class="dd-tag hi">1.4B views</span>
+              <span class="dd-tag hi">16M likes</span>
+              <span class="dd-tag">📅 Oct 1987</span>
+              <span class="dd-tag">💾 ~280 MB</span>
             </div>
             <div class="dd-pills">
               <div class="dd-pill on">Video + Audio</div>
@@ -1267,15 +1228,15 @@ footer {
               <div class="dd-pill">Video Only</div>
             </div>
             <div class="dd-bottom">
-              <div class="dd-select">1080p [MP4]</div>
+              <div class="dd-select">1080p [MP4]  ~280MB</div>
               <div class="dd-select">Best Audio</div>
-              <button class="dd-dlbtn" id="dl-btn" onclick="downloadTxt()" disabled>↓  Download</button>
+              <div class="dd-dlbtn">↓  Download</div>
             </div>
           </div>
         </div>
         <div class="dd-prog-area">
           <div class="dd-prog-row">
-            <span id="prog-label">Waiting…</span>
+            <span>3.2 MB/s  ·  Downloading…</span>
             <span id="dl-pct">0%</span>
           </div>
           <div class="dd-prog-track">
@@ -1319,7 +1280,7 @@ footer {
             <div class="pl-idx">02</div>
             <div class="pl-mini-thumb">▶</div>
             <div style="flex:1"><div class="pl-vtitle">Neural Networks Explained Simply</div><div class="pl-vmeta">⏱ 28:14  ·  👁 890K  ·  💾 ~320 MB</div></div>
-            <div class="pl-rowbtn">↓ 64%</div>
+            <div class="pl-rowbtn" style="animation: prog-dl 3s ease-in-out infinite">↓ 64%</div>
           </div>
           <div class="pl-row">
             <div class="pl-chk"><span class="pl-chk-tick">✓</span></div>
@@ -1356,8 +1317,8 @@ footer {
       <div class="demo-body">
         <div class="dd-search" style="margin-bottom:18px">
           <span style="font-size:14px;opacity:.4">🖼</span>
-          <div class="dd-search-txt" style="font-size:13px;color:var(--t3);font-family:var(--mono);flex:1">Paste video URL…</div>
-          <div class="dd-search-btn" style="cursor:default">Fetch ↗</div>
+          <div class="dd-search-txt">Paste video URL…</div>
+          <div class="dd-search-btn">Fetch ↗</div>
         </div>
         <div class="tb-card">
           <div class="tb-img">
@@ -1790,12 +1751,14 @@ resize(); addEventListener('resize', resize);
 
 (function draw() {
   ctx.clearRect(0, 0, W, H);
+  // Grid
   ctx.strokeStyle = 'rgba(255,255,255,.022)'; ctx.lineWidth = .5;
   const S = 52, tx = (-ox % S + S) % S, ty = (-oy % S + S) % S;
   ctx.beginPath();
   for (let x = tx - S; x < W + S; x += S) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
   for (let y = ty - S; y < H + S; y += S) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
   ctx.stroke();
+  // Particles
   for (const p of particles) {
     p.x += p.vx; p.y += p.vy;
     if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
@@ -1864,6 +1827,7 @@ function cp(btn, text) {
     const t = btn.textContent; btn.textContent = '✓ Copied'; btn.classList.add('ok');
     setTimeout(() => { btn.textContent = t; btn.classList.remove('ok'); }, 1800);
   }).catch(() => {
+    // Fallback for mobile/older browsers
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select();
@@ -1878,215 +1842,6 @@ function cp(btn, text) {
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', () => mob.classList.remove('open'));
 });
-
-/* ─── ENTER KEY ON INPUT ──────────────── */
-document.getElementById('yt-url-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') fetchVideoInfo();
-});
-
-/* ─── VIDEO INFO STATE ────────────────── */
-let currentVideoData = null;
-
-/* ─── UTILITY HELPERS ─────────────────── */
-function extractVideoId(url) {
-  try {
-    const u = new URL(url);
-    // Standard watch URL
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      return u.searchParams.get('v');
-    }
-    // Short URL: youtu.be/ID
-    if (u.hostname === 'youtu.be') {
-      return u.pathname.slice(1).split('?')[0];
-    }
-    // Embed URL
-    const embedMatch = u.pathname.match(/\/embed\/([^/?]+)/);
-    if (embedMatch) return embedMatch[1];
-    // Shorts URL
-    const shortsMatch = u.pathname.match(/\/shorts\/([^/?]+)/);
-    if (shortsMatch) return shortsMatch[1];
-  } catch (_) {}
-  // Fallback: grab v= from raw string
-  const m = url.match(/[?&]v=([^&]{11})/);
-  return m ? m[1] : null;
-}
-
-function formatNumber(n) {
-  n = parseInt(n, 10);
-  if (isNaN(n)) return '—';
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return n.toString();
-}
-
-function formatDuration(iso) {
-  // ISO 8601 duration: PT1H2M3S
-  if (!iso) return '—';
-  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!m) return '—';
-  const h = parseInt(m[1] || 0), min = parseInt(m[2] || 0), sec = parseInt(m[3] || 0);
-  if (h > 0) return `${h}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  return `${min}:${String(sec).padStart(2,'0')}`;
-}
-
-function setStatus(msg, type) {
-  const el = document.getElementById('dd-status');
-  el.textContent = msg;
-  el.className = 'dd-status ' + type;
-}
-
-function setProgress(pct, label) {
-  document.getElementById('dl-fill').style.width = pct + '%';
-  document.getElementById('dl-pct').textContent = pct + '%';
-  document.getElementById('prog-label').textContent = label;
-}
-
-/* ─── FETCH VIDEO INFO ────────────────── */
-async function fetchVideoInfo() {
-  const rawUrl = document.getElementById('yt-url-input').value.trim();
-  if (!rawUrl) { setStatus('⚠ Please paste a YouTube URL first.', 'error'); return; }
-
-  const videoId = extractVideoId(rawUrl);
-  if (!videoId) { setStatus('⚠ Could not find a video ID in that URL. Make sure it\'s a valid YouTube link.', 'error'); return; }
-
-  const fetchBtn = document.getElementById('fetch-btn');
-  const dlBtn = document.getElementById('dl-btn');
-  fetchBtn.disabled = true;
-  dlBtn.disabled = true;
-  setStatus('⏳ Fetching video info…', 'loading');
-  setProgress(0, 'Fetching…');
-
-  const apiKey = 'YOUR_API_KEY_HERE';
-
-  try {
-    // ── Step 1: Fetch video data ──
-    const videoRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`
-    );
-    const videoData = await videoRes.json();
-
-    if (!videoData.items || videoData.items.length === 0) {
-      setStatus('❌ Video not found. It may be private, deleted, or the URL is incorrect.', 'error');
-      fetchBtn.disabled = false;
-      setProgress(0, 'Waiting…');
-      return;
-    }
-
-    setProgress(50, 'Fetching channel info…');
-
-    const item = videoData.items[0];
-    const snippet = item.snippet;
-    const stats = item.statistics;
-    const contentDetails = item.contentDetails;
-    const channelId = snippet.channelId;
-
-    // ── Step 2: Fetch channel data ──
-    const channelRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${apiKey}`
-    );
-    const channelData = await channelRes.json();
-
-    let channelName = snippet.channelTitle || '[unknown]';
-    let channelUrl = `https://www.youtube.com/channel/${channelId}`;
-    let country = '[not found]';
-
-    if (channelData.items && channelData.items.length > 0) {
-      const ch = channelData.items[0];
-      channelName = ch.snippet.title || channelName;
-      country = ch.snippet.country || '[not found]';
-    }
-
-    setProgress(80, 'Building preview…');
-
-    // ── Store for download ──
-    currentVideoData = {
-      title: snippet.title || '[not found]',
-      channelName,
-      channelUrl,
-      country,
-      videoUrl: rawUrl,
-      videoId,
-      publishedAt: snippet.publishedAt || '[not found]',
-      description: snippet.description || '[not found]',
-      views: stats?.viewCount || '0',
-      likes: stats?.likeCount || '0',
-      duration: contentDetails?.duration || '',
-      thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-    };
-
-    // ── Update UI ──
-    document.getElementById('dd-title').textContent = currentVideoData.title;
-    document.getElementById('dd-channel').textContent = channelName.toUpperCase();
-    document.getElementById('dd-dur').textContent = formatDuration(currentVideoData.duration);
-
-    // Tags
-    const pub = currentVideoData.publishedAt ? currentVideoData.publishedAt.slice(0,10) : '—';
-    document.getElementById('dd-tags').innerHTML = `
-      <span class="dd-tag hi">👁 ${formatNumber(currentVideoData.views)} views</span>
-      <span class="dd-tag hi">👍 ${formatNumber(currentVideoData.likes)} likes</span>
-      <span class="dd-tag">📅 ${pub}</span>
-    `;
-
-    // Thumbnail
-    const thumbEl = document.getElementById('dd-thumb');
-    thumbEl.innerHTML = `<img src="${currentVideoData.thumbnail}" alt="thumbnail" onerror="this.style.display='none'"><span class="dd-play" style="position:relative;z-index:1">▶</span><div class="dd-dur-badge">${formatDuration(currentVideoData.duration)}</div>`;
-
-    document.getElementById('dd-card').classList.add('loaded');
-    setProgress(100, '✓ Ready to download');
-    setStatus('✅ Video info loaded! Click ↓ Download to save the details as a .txt file.', 'success');
-    dlBtn.disabled = false;
-
-  } catch (err) {
-    setStatus('❌ Error: ' + err.message, 'error');
-    setProgress(0, 'Error');
-  } finally {
-    fetchBtn.disabled = false;
-  }
-}
-
-/* ─── DOWNLOAD TXT ────────────────────── */
-function downloadTxt() {
-  if (!currentVideoData) return;
-
-  const data = `TITLE: ${currentVideoData.title}
-CHANNEL URL: ${currentVideoData.channelUrl}
-CHANNEL NAME: ${currentVideoData.channelName}
-COUNTRY: ${currentVideoData.country}
-UPLOADED DATE: ${currentVideoData.publishedAt}
-VIDEO URL: ${currentVideoData.videoUrl}
-VIEWS: ${currentVideoData.views}
-LIKES: ${currentVideoData.likes}
-DESCRIPTION:
-${currentVideoData.description}`;
-
-  // Sanitise filename
-  const safeName = currentVideoData.title.replace(/[\\/:*?"<>|]/g, '_').slice(0, 120);
-  const filename = safeName + '.txt';
-
-  const blob = new Blob([data], { type: 'text/plain' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
-
-  // Animate progress bar as "downloading"
-  setProgress(0, 'Saving file…');
-  let p = 0;
-  const t = setInterval(() => {
-    p = Math.min(p + 8, 100);
-    document.getElementById('dl-fill').style.width = p + '%';
-    document.getElementById('dl-pct').textContent = p + '%';
-    if (p >= 100) {
-      clearInterval(t);
-      document.getElementById('prog-label').textContent = '✓ Saved!';
-      setStatus('✅ Downloaded as "' + filename + '"', 'success');
-    }
-  }, 30);
-}
 </script>
 </body>
 </html>
