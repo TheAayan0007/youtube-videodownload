@@ -23,8 +23,26 @@ from PIL import Image as PILImage
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore    import *
 from PyQt6.QtGui     import *
+# Explicitly ensure blur effect is available (included in QtWidgets via *)
+from PyQt6.QtWidgets import QGraphicsBlurEffect
 
-DATA_FILE = Path(__file__).parent / 'data.json'
+# ─── Fixed storage: always C:\\Prism\\Main.json ───────────────────────────────
+PRISM_DIR = Path('C:/Prism')
+DATA_FILE = PRISM_DIR / 'Main.json'
+
+def _ensure_prism_dir():
+    """Create C:\\Prism if it doesn't exist yet. Falls back to script dir on non-Windows."""
+    global DATA_FILE
+    try:
+        PRISM_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        fallback = Path(__file__).parent / 'Main.json'
+        DATA_FILE = fallback
+        import sys as _sys
+        _sys.stderr.write(f'[Prism] WARNING: cannot create C:/Prism ({e}), '
+                          f'falling back to {fallback}\n')
+
+_ensure_prism_dir()
 
 # ─────────────────────────── Console redirection ────────────────────────────
 
@@ -57,39 +75,57 @@ sys.stderr = _S_ERR
 
 # ─────────────────────────── Persistence ────────────────────────────────────
 
+_DATA_DEFAULTS = {
+    'nav_position':       'top',
+    'history':            [],
+    'bg_animate':         True,
+    'cursor_color':       '#3b82f6',
+    'top_glow_color':     '#3b82f6',
+    'corner_glow_color':  '#7c3aed',
+    'font_family':        'Outfit',
+    'splash_font':        'Outfit',
+    'splash_enabled':     True,
+    'settings_blur':      18,
+    'settings_history':   [],
+    'download_folder':    '',
+    'ask_download_folder': True,
+}
+
 def load_data():
     if DATA_FILE.exists():
         try:
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
                 d = json.load(f)
-                defaults = {
-                    'nav_position':       'top',
-                    'history':            [],
-                    'bg_animate':         True,
-                    'cursor_color':       '#3b82f6',
-                    'top_glow_color':     '#3b82f6',
-                    'corner_glow_color':  '#7c3aed',
-                }
-                for k, v in defaults.items():
-                    d.setdefault(k, v)
-                return d
-        except:
+            for k, v in _DATA_DEFAULTS.items():
+                d.setdefault(k, v)
+            return d
+        except Exception:
             pass
-    return {
-        'nav_position':       'top',
-        'history':            [],
-        'bg_animate':         True,
-        'cursor_color':       '#3b82f6',
-        'top_glow_color':     '#3b82f6',
-        'corner_glow_color':  '#7c3aed',
-    }
+    return dict(_DATA_DEFAULTS)
 
 def save_data(d):
+    _ensure_prism_dir()
     try:
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(d, f, indent=2, ensure_ascii=False)
     except Exception as e:
         _ORIG_OUT.write(f'[{softname}] save_data error: {e}\n')
+
+# ─────────────────────── Download folder helper ─────────────────────────────
+
+def get_download_dir(parent_widget=None) -> str:
+    """Return the configured download folder, or ask the user if not set.
+    Returns empty string if user cancels the picker."""
+    d = load_data()
+    folder = d.get('download_folder', '').strip()
+    if folder and Path(folder).is_dir():
+        return folder
+    # Ask every time (or folder not set / no longer valid)
+    chosen = QFileDialog.getExistingDirectory(
+        parent_widget, 'Select Download Folder',
+        str(Path.home() / 'Downloads')
+    )
+    return chosen   # may be '' if cancelled
 
 # ─────────────────────────── URL helpers ────────────────────────────────────
 
@@ -157,8 +193,7 @@ QScrollArea > QWidget > QWidget {{ background:transparent; }}
     min-height:58px; max-height:58px;
 }}
 #logoBar {{
-    background:rgba(9,9,11,0.97);
-    border-bottom:1px solid {C['border']};
+    background: transparent;
     min-height:46px; max-height:46px;
 }}
 #tabsContainer {{
@@ -322,11 +357,223 @@ QPushButton#tbPngBtn:hover {{
     background:rgba(255,255,255,0.04);
 }}
 #slidePanel {{
-    background:{C['panel_bg']};
+    background:rgba(10,10,16,0.82);
     border-left:1px solid {C['border2']};
 }}
+
+/* ═══════════════════ SETTINGS MODAL — PREMIUM ═══════════════════ */
+#settingsModal {{ background: transparent; }}
+
+#settingsCard {{
+    background: rgba(10,10,18,0.82);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 18px;
+}}
+
+/* Header */
+#sHdr {{
+    background: #0a0a11;
+    border-bottom: 1px solid rgba(255,255,255,0.055);
+    border-radius: 18px 18px 0 0;
+    min-height: 66px; max-height: 66px;
+}}
+QLabel#sHdrTitle {{
+    color: {C['txt']};
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}}
+QLabel#sHdrSub {{
+    color: {C['txt3']};
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+}}
+QPushButton#sCloseBtn {{
+    background: rgba(255,255,255,0.0);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: {C['txt3']};
+    font-size: 16px;
+    min-width: 32px; max-width: 32px;
+    min-height: 32px; max-height: 32px;
+}}
+QPushButton#sCloseBtn:hover {{
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.08);
+    color: {C['txt']};
+}}
+
+/* Section label */
+QLabel#sSecLabel {{
+    color: {C['txt3']};
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+}}
+
+/* Row card */
+#sRow {{
+    background: rgba(255,255,255,0.022);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+}}
+
+/* Row title */
+QLabel#sRowTitle {{
+    color: {C['txt']};
+    font-size: 13px;
+    font-weight: 600;
+}}
+
+/* Row description */
+QLabel#sRowDesc {{
+    color: {C['txt2']};
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.1px;
+}}
+
+/* Path label */
+QLabel#sPathLbl {{
+    color: {C['txt3']};
+    font-size: 10px;
+    font-weight: 400;
+    font-family: 'Consolas', 'Courier New', monospace;
+}}
+
+/* Nav position pills */
+QPushButton#sPosBtn {{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 9px;
+    color: {C['txt2']};
+    font-size: 12px;
+    font-weight: 600;
+    min-height: 38px;
+    letter-spacing: 0.2px;
+}}
+QPushButton#sPosBtn:hover {{
+    background: rgba(255,255,255,0.055);
+    border-color: rgba(255,255,255,0.10);
+    color: {C['txt']};
+}}
+QPushButton#sPosBtn[active=true] {{
+    background: rgba(59,130,246,0.12);
+    border: 1px solid rgba(59,130,246,0.35);
+    color: {C['accent2']};
+}}
+
+/* Toggle pill */
+QPushButton#sToggleBtn {{
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    color: {C['txt2']};
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0 16px;
+}}
+QPushButton#sToggleBtn[on=true] {{
+    background: rgba(59,130,246,0.15);
+    border-color: rgba(59,130,246,0.40);
+    color: {C['accent2']};
+}}
+QPushButton#sToggleBtn:hover {{
+    border-color: rgba(255,255,255,0.14);
+    color: {C['txt']};
+}}
+QPushButton#sToggleBtn[on=true]:hover {{
+    background: rgba(59,130,246,0.22);
+}}
+
+/* Ghost action buttons (Reset, Choose Folder) */
+QPushButton#sGhostBtn {{
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: {C['txt2']};
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    min-height: 30px;
+    padding: 0 14px;
+}}
+QPushButton#sGhostBtn:hover {{
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.14);
+    color: {C['txt']};
+}}
+QPushButton#sGhostBtn[danger=true]:hover {{
+    background: rgba(239,68,68,0.08);
+    border-color: rgba(239,68,68,0.30);
+    color: #f87171;
+}}
+
+/* Font combo */
+QFontComboBox#sFontCombo {{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 9px;
+    color: {C['txt']};
+    font-size: 12px;
+    font-weight: 500;
+    min-height: 32px;
+    padding: 0 10px;
+    selection-background-color: rgba(59,130,246,0.25);
+}}
+QFontComboBox#sFontCombo:focus {{
+    border-color: rgba(59,130,246,0.35);
+}}
+
+/* Footer */
+#sFooter {{
+    background: rgba(0,0,0,0.25);
+    border-top: 1px solid rgba(255,255,255,0.045);
+    border-radius: 0 0 18px 18px;
+    min-height: 68px; max-height: 68px;
+}}
+QPushButton#sSaveBtn {{
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #2563eb, stop:1 #1d4ed8);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    min-height: 42px;
+    min-width: 148px;
+    padding: 0 28px;
+}}
+QPushButton#sSaveBtn:hover {{
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #3b82f6, stop:1 #2563eb);
+}}
+QPushButton#sSaveBtn:pressed {{
+    background: #1d4ed8;
+}}
+QPushButton#sCancelBtn {{
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    color: {C['txt2']};
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 42px;
+    min-width: 96px;
+    padding: 0 22px;
+}}
+QPushButton#sCancelBtn:hover {{
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.14);
+    color: {C['txt']};
+}}
 #panelHeader {{
-    background:{C['panel_bg']};
+    background:rgba(8,8,14,0.88);
     border-bottom:1px solid {C['border']};
     min-height:52px; max-height:52px;
 }}
@@ -495,6 +742,25 @@ QCheckBox::indicator:checked {{
 QCheckBox::indicator:checked:hover {{
     background: {C['accent2']};
     border-color: {C['accent2']};
+}}
+
+QFontComboBox {{
+    background:{C['bg3']}; border:1px solid {C['border']};
+    border-radius:10px; color:{C['txt']};
+    font-size:13px; padding:8px 32px 8px 13px; min-height:40px;
+}}
+QFontComboBox:focus {{ border-color:{C['accent']}; }}
+QFontComboBox:hover {{ border-color:{C['border2']}; }}
+QFontComboBox::drop-down {{ border:none; width:24px; }}
+QFontComboBox::down-arrow {{
+    image:none;
+    border-left:4px solid transparent; border-right:4px solid transparent;
+    border-top:5px solid {C['txt3']}; width:0; height:0;
+}}
+QFontComboBox QAbstractItemView {{
+    background:{C['bg3']}; border:1px solid {C['border2']};
+    color:{C['txt']}; selection-background-color:rgba(59,130,246,0.2);
+    selection-color:{C['accent2']}; padding:4px; outline:none;
 }}
 """
 
@@ -681,26 +947,7 @@ class ColorPickerBtn(QPushButton):
         self._refresh()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
-#  NEXUS  –  Premium Splash Screen
-#
-#  Concept: A luminous ring draws itself around the centre. On completion it
-#  pulses outward, sparks fly off the leading tip, and "Nexus" materialises
-#  from inside the ring with a chromatic gradient and layered glow. A thin
-#  gradient line sweeps beneath it. The entire scene breathes once, then
-#  dissolves to black.
-#
-#  Timeline (ticks × 16 ms ≈ seconds):
-#   [ 0 →  12]  Background grid + glows breathe in
-#   [12 →  84]  Ring draws clockwise, tip emits sparks every 3 ticks
-#   [86 → 116]  Ring-close expansion pulse
-#   [90 → 130]  "Nexus" rises + fades in, ring dims to 30 %
-#   [118→ 142]  Separator line sweeps out, end-cap dots pop
-#   [136→ 158]  Subtitle + version fade in
-#   [158→ 370]  Hold
-#   [370→ 416]  Full scene fades to black
-#   [426+]      finished() signal emitted
-#
+#  SPLASH SCREEN
 # ─────────────────────────────────────────────────────────────────────────────
 
 import math, random
@@ -716,63 +963,44 @@ class HelloSplash(QWidget):
 
     finished = pyqtSignal()
 
-    # ── Ring geometry ─────────────────────────────────────────────────────────
-    _RING_DUR    = 72      # ticks to complete ring draw
+    _RING_DUR    = 72
     _RING_START  = 12
-    _PULSE_START = 86      # ring-close pulse
-    _NEXUS_START = 90      # text materialises
-    _LINE_START  = 118     # separator line
-    _SUB_START   = 136     # subtitle / version
-    _FADE_START  = 370     # fade to black
+    _PULSE_START = 86
+    _NEXUS_START = 90
+    _LINE_START  = 118
+    _SUB_START   = 136
+    _FADE_START  = 370
     _FADE_DUR    = 46
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, font_family: str = ''):
         super().__init__(parent)
         self.setStyleSheet('background:#000008;')
+        self._splash_font = font_family or 'Outfit'
         self._t = 0
-
-        # Ring
-        self._ring_arc   = 0.0   # 0 → 1
+        self._ring_arc   = 0.0
         self._ring_alpha = 0.0
-        self._ring_fade  = 1.0   # dims as nexus appears
-        self._pulse      = 0.0   # 0 → 1 expansion pulse
-
-        # Sparks
+        self._ring_fade  = 1.0
+        self._pulse      = 0.0
         self._sparks: list[dict] = []
-
-        # Nexus text
         self._nex_alpha = 0.0
         self._nex_glow  = 0.0
-        self._nex_y     = 22.0   # slides to 0
-
-        # Separator
+        self._nex_y     = 22.0
         self._line_w    = 0.0
         self._line_a    = 0.0
         self._dot_a     = 0.0
-
-        # Sub
         self._sub_a     = 0.0
         self._ver_a     = 0.0
-
-        # Background
         self._bg_a      = 0.0
         self._ox        = 0.0
         self._oy        = 0.0
-
-        # Master
         self._master    = 1.0
-
-        # Precompute Nexus path
         self._npath    = None
         self._nw       = 0.0
         self._nh       = 0.0
         self._precompute_nexus()
-
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
         self._timer.start(16)
-
-    # ── Easing ────────────────────────────────────────────────────────────────
 
     @staticmethod
     def _eo3(t):
@@ -789,11 +1017,10 @@ class HelloSplash(QWidget):
         t = max(0.0, min(1.0, t))
         return t * t * (3.0 - 2.0 * t)
 
-    # ── Precompute ────────────────────────────────────────────────────────────
-
     def _nexus_font(self) -> QFont:
         f = QFont()
-        for fam in ('Outfit', 'Segoe UI', 'Ubuntu', 'Arial'):
+        # Try the user-chosen splash font first, then fall back gracefully
+        for fam in (self._splash_font, 'Outfit', 'Segoe UI', 'Ubuntu', 'Arial'):
             f.setFamily(fam)
             if QFontInfo(f).family().lower() == fam.lower():
                 break
@@ -821,12 +1048,8 @@ class HelloSplash(QWidget):
         super().resizeEvent(e)
         self._precompute_nexus()
 
-    # ── Ring radius ───────────────────────────────────────────────────────────
-
     def _ring_r(self) -> float:
         return min(self.width(), self.height()) * 0.21
-
-    # ── Spark helpers ─────────────────────────────────────────────────────────
 
     def _spawn_spark(self):
         angle = self._ring_arc * math.pi * 2 - math.pi / 2
@@ -858,8 +1081,6 @@ class HelloSplash(QWidget):
             s['life'] -= s['decay']
         self._sparks = [s for s in self._sparks if s['life'] > 0]
 
-    # ── Tick ──────────────────────────────────────────────────────────────────
-
     def _tick(self):
         self._t += 1
         t = self._t
@@ -876,13 +1097,11 @@ class HelloSplash(QWidget):
         FS = self._FADE_START
         FD = self._FADE_DUR
 
-        # Background
         self._bg_a = min(1.0, eo3(t / 14.0))
         if self._bg_a > 0:
             self._ox = (self._ox + 0.22) % 52
             self._oy = (self._oy + 0.13) % 52
 
-        # Ring
         if t >= RS:
             rf = (t - RS) / RD
             self._ring_alpha = min(1.0, eo3(min(rf, 1.0) * 2.0))
@@ -890,11 +1109,9 @@ class HelloSplash(QWidget):
             if rf < 1.0 and rf > 0.05 and t % 3 == 0:
                 self._spawn_spark()
 
-        # Pulse
         if t >= PS:
             self._pulse = min(1.0, eo3((t - PS) / 30.0))
 
-        # prism
         if t >= NS:
             nf = (t - NS) / 40.0
             self._nex_alpha = min(1.0, eo5(nf))
@@ -902,25 +1119,20 @@ class HelloSplash(QWidget):
             self._nex_y     = 22.0 * (1.0 - min(1.0, eo3(nf)))
             self._ring_fade = max(0.15, 1.0 - eo3(min(1.0, (t - NS) / 60.0)) * 0.85)
 
-        # Line
         if t >= LS:
             lf = eo3(min(1.0, (t - LS) / 22.0))
-            side = min(self.width(), self.height())
             self._line_w  = lf * self._nw * self._master
             self._line_a  = min(1.0, lf * 3.0)
         if t >= LS + 18:
             self._dot_a = eo3(min(1.0, (t - LS - 18) / 14.0))
 
-        # Subtitle
         if t >= SS:
             self._sub_a = eo3(min(1.0, (t - SS) / 20.0))
         if t >= SS + 14:
             self._ver_a = eo3(min(1.0, (t - SS - 14) / 16.0))
 
-        # Sparks
         self._update_sparks()
 
-        # Master fade
         if t >= FS:
             self._master = max(0.0, 1.0 - eio(min(1.0, (t - FS) / FD)))
 
@@ -929,8 +1141,6 @@ class HelloSplash(QWidget):
         if t >= FS + FD + 10:
             self._timer.stop()
             self.finished.emit()
-
-    # ── Paint ─────────────────────────────────────────────────────────────────
 
     def paintEvent(self, _):
         p = QPainter(self)
@@ -944,10 +1154,8 @@ class HelloSplash(QWidget):
         GA = self._master
         BG = self._bg_a
 
-        # ── Base ──────────────────────────────────────────────────────────────
         p.fillRect(self.rect(), QColor('#000008'))
 
-        # ── Grid ──────────────────────────────────────────────────────────────
         if BG > 0.01:
             p.setPen(QPen(QColor(255, 255, 255, int(BG * 11)), 0.5))
             x = -self._ox
@@ -957,7 +1165,6 @@ class HelloSplash(QWidget):
             while y <= H + 52:
                 p.drawLine(0, int(y), W, int(y)); y += 52
 
-        # ── Ambient radial glows ──────────────────────────────────────────────
         g1 = QRadialGradient(CX, CY * 0.3, W * 0.55)
         g1.setColorAt(0, QColor(20, 60, 180, int(BG * 30)))
         g1.setColorAt(1, QColor(0, 0, 0, 0))
@@ -968,7 +1175,6 @@ class HelloSplash(QWidget):
         g2.setColorAt(1, QColor(0, 0, 0, 0))
         p.setBrush(g2); p.drawRect(self.rect())
 
-        # ── Corner brackets ───────────────────────────────────────────────────
         if BG > 0.01:
             p.setOpacity(BG * GA * 0.28)
             p.setPen(QPen(QColor(96, 165, 250), 0.8))
@@ -984,7 +1190,6 @@ class HelloSplash(QWidget):
                 p.drawLine(bx, by, bx, by + sy*L)
             p.setOpacity(1.0)
 
-        # ── Ring ──────────────────────────────────────────────────────────────
         R  = self._ring_r()
         ra = self._ring_alpha * self._ring_fade * GA
 
@@ -992,19 +1197,16 @@ class HelloSplash(QWidget):
             start_deg = -90.0
             span_deg  = self._ring_arc * 360.0
 
-            # Outer halo
             p.setOpacity(ra * 0.09)
             p.setPen(QPen(QColor(96, 165, 250), 24))
             p.drawArc(QRectF(CX-R-12, CY-R-12, (R+12)*2, (R+12)*2),
                       int(start_deg*16), int(span_deg*16))
 
-            # Mid halo
             p.setOpacity(ra * 0.16)
             p.setPen(QPen(QColor(130, 120, 255), 8))
             p.drawArc(QRectF(CX-R-3, CY-R-3, (R+3)*2, (R+3)*2),
                       int(start_deg*16), int(span_deg*16))
 
-            # Core arc — rendered in ~90 segments for colour variation
             SEGS = 90
             for i in range(SEGS):
                 t0 = i / SEGS
@@ -1014,7 +1216,6 @@ class HelloSplash(QWidget):
                 a1_deg = start_deg + t1 * 360.0
 
                 frac = t0
-                # Hue 220 (blue) → 270 (violet) → 220
                 hue  = int(220 + math.sin(frac * math.pi) * 55)
                 lite = int(58  + math.sin(frac * math.pi) * 18)
                 col  = QColor.fromHsl(hue, 210, lite)
@@ -1023,7 +1224,6 @@ class HelloSplash(QWidget):
                 p.drawArc(QRectF(CX-R, CY-R, R*2, R*2),
                           int(a0_deg*16), int((a1_deg-a0_deg)*16))
 
-            # Bright leading tip
             if self._ring_arc < 1.0:
                 tip_rad = (start_deg + span_deg) * math.pi / 180.0
                 tx = CX + math.cos(tip_rad) * R
@@ -1039,7 +1239,6 @@ class HelloSplash(QWidget):
                 p.setBrush(QColor(255, 255, 255, int(ra * 255)))
                 p.drawEllipse(QPointF(tx, ty), 2.8, 2.8)
 
-        # Pulse ring after close
         if self._pulse > 0 and self._pulse < 1.0:
             pR = R + self._pulse * 85.0
             pA = (1.0 - self._pulse) * 0.38 * GA
@@ -1054,7 +1253,6 @@ class HelloSplash(QWidget):
             p.drawEllipse(QPointF(CX, CY), p2R, p2R)
             p.setOpacity(1.0)
 
-        # Subtle ring interior fill once prism appears
         if self._ring_arc >= 1.0 and self._nex_alpha > 0:
             fg = QRadialGradient(CX, CY, R * 0.88)
             fg.setColorAt(0,   QColor(59, 130, 246, int(self._nex_alpha * GA * 10)))
@@ -1063,7 +1261,6 @@ class HelloSplash(QWidget):
             p.setBrush(fg); p.setPen(Qt.PenStyle.NoPen)
             p.drawEllipse(QPointF(CX, CY), R * 0.88, R * 0.88)
 
-        # ── Sparks ────────────────────────────────────────────────────────────
         p.setPen(Qt.PenStyle.NoPen)
         for s in self._sparks:
             a = s['life'] * self._ring_fade * self._ring_alpha * GA
@@ -1074,7 +1271,6 @@ class HelloSplash(QWidget):
             r_s = s['size'] * s['life']
             p.drawEllipse(QPointF(s['x'], s['y']), r_s, r_s)
 
-        # ── Prism ─────────────────────────────────────────────────────────────
         if self._nex_alpha > 0.003 and self._npath:
             nw, nh = self._nw, self._nh
             nx_off = CX
@@ -1084,7 +1280,6 @@ class HelloSplash(QWidget):
             p.translate(nx_off, ny_off)
             p.translate(-nw / 2.0, -nh / 2.0)
 
-            # Glow passes (back-to-front, widest first)
             if self._nex_glow > 0.01:
                 specs = [
                     (0.085, 0.08, QColor(59, 130, 246)),
@@ -1102,17 +1297,15 @@ class HelloSplash(QWidget):
                     p.drawPath(self._npath)
                     p.restore()
 
-            # Main fill gradient
             gf = QLinearGradient(0, 0, nw, 0)
-            gf.setColorAt(0.00, QColor(147, 197, 253))   # blue-300
-            gf.setColorAt(0.25, QColor( 59, 130, 246))   # blue-500
-            gf.setColorAt(0.60, QColor(139,  92, 246))   # violet-500
-            gf.setColorAt(1.00, QColor(221, 214, 254))   # violet-200
+            gf.setColorAt(0.00, QColor(147, 197, 253))
+            gf.setColorAt(0.25, QColor( 59, 130, 246))
+            gf.setColorAt(0.60, QColor(139,  92, 246))
+            gf.setColorAt(1.00, QColor(221, 214, 254))
             p.setOpacity(self._nex_alpha * GA)
             p.setBrush(gf); p.setPen(Qt.PenStyle.NoPen)
             p.drawPath(self._npath)
 
-            # Sheen
             if self._nex_glow > 0.05:
                 sh = QLinearGradient(0, 0, 0, nh * 0.32)
                 sh.setColorAt(0, QColor(255, 255, 255, int(self._nex_glow * GA * 48)))
@@ -1122,7 +1315,6 @@ class HelloSplash(QWidget):
 
             p.restore()
 
-        # ── Separator line ────────────────────────────────────────────────────
         if self._line_a > 0.005:
             ny_off = CY + self._nh * 0.5 + 28.0
             half   = self._line_w / 2.0
@@ -1138,7 +1330,6 @@ class HelloSplash(QWidget):
                 p.setPen(QPen(QBrush(lg), 0.85))
                 p.drawLine(QPointF(CX-half, ny_off), QPointF(CX+half, ny_off))
 
-                # End-cap dots
                 if self._dot_a > 0.01:
                     p.setOpacity(self._dot_a * GA)
                     p.setPen(Qt.PenStyle.NoPen)
@@ -1151,7 +1342,6 @@ class HelloSplash(QWidget):
                         p.setBrush(QColor(220, 210, 255, 240))
                         p.drawEllipse(QPointF(dx, ny_off), 1.8, 1.8)
 
-        # ── Subtitle ──────────────────────────────────────────────────────────
         if self._sub_a > 0.005:
             ny_off = CY + self._nh * 0.5 + 60.0
             p.setOpacity(self._sub_a * GA * 0.60)
@@ -1174,7 +1364,6 @@ class HelloSplash(QWidget):
             p.setPen(QPen(QBrush(sg), 1))
             p.drawText(int(CX - sw/2), int(ny_off), sub_txt)
 
-        # ── Version ───────────────────────────────────────────────────────────
         if self._ver_a > 0.005:
             ny_off = CY + self._nh * 0.5 + 84.0
             p.setOpacity(self._ver_a * GA * 0.38)
@@ -1185,7 +1374,6 @@ class HelloSplash(QWidget):
             vw = QFontMetrics(fver).horizontalAdvance('v7.3')
             p.drawText(int(CX - vw/2), int(ny_off), 'v7.3')
 
-        # ── Vignette edges ────────────────────────────────────────────────────
         vr = min(W, H) * 0.75
         ve = QRadialGradient(CX, CY, vr * 0.38, CX, CY, vr)
         ve.setColorAt(0, QColor(0, 0, 0, 0))
@@ -1194,12 +1382,12 @@ class HelloSplash(QWidget):
         p.setBrush(ve); p.setPen(Qt.PenStyle.NoPen)
         p.drawRect(self.rect())
 
-        # ── Final fade overlay ────────────────────────────────────────────────
         if GA < 0.999:
             ov = QColor(0, 0, 8, int((1.0 - GA) * 255))
             p.fillRect(self.rect(), ov)
 
         p.end()
+
 # ────────────────────── Workers ─────────────────────────────────────────────
 
 class VideoInfoWorker(QThread):
@@ -1587,13 +1775,9 @@ class SearchBar(QWidget):
     def set_info(self, t):    self.status.show_info(t)
 
 
-# ────────────────────── Video result card (single reusable widget) ───────────
+# ────────────────────── Video result card ───────────────────────────────────
 
 class VideoResultCard(QFrame):
-    """
-    A self-contained card that shows all video metadata + download controls.
-    Created once per fetched video; multiple cards stack vertically.
-    """
     download_saved = pyqtSignal(dict)
 
     def __init__(self, info: dict, parent=None):
@@ -1607,12 +1791,9 @@ class VideoResultCard(QFrame):
         self._build()
         self._populate(info)
 
-    # ── Layout ────────────────────────────────────────────────────────────────
-
     def _build(self):
         cl = QHBoxLayout(self); cl.setContentsMargins(0, 0, 0, 0); cl.setSpacing(0)
 
-        # Left thumbnail column
         left = QWidget(); left.setFixedWidth(320)
         left.setStyleSheet("background:#0a0a0e;border-radius:20px 0 0 20px;")
         ll = QVBoxLayout(left); ll.setContentsMargins(0, 0, 0, 0); ll.setSpacing(0)
@@ -1623,7 +1804,6 @@ class VideoResultCard(QFrame):
         ll.addLayout(dr); ll.addStretch()
         cl.addWidget(left)
 
-        # Right detail column
         right = QWidget()
         rl = QVBoxLayout(right); rl.setContentsMargins(20, 18, 20, 14); rl.setSpacing(0)
 
@@ -1642,7 +1822,6 @@ class VideoResultCard(QFrame):
             t1l.addWidget(w)
         t1l.addStretch(); rl.addWidget(tags1)
 
-        # Format pills
         pr = QHBoxLayout(); pr.setContentsMargins(0, 4, 0, 10); pr.setSpacing(6)
         self._pills = {}
         for key, txt in [('va', 'Video + Audio'), ('ao', 'Audio Only'), ('vo', 'Video Only')]:
@@ -1654,7 +1833,6 @@ class VideoResultCard(QFrame):
         pr.addStretch(); rl.addLayout(pr)
         rl.addWidget(sep_h())
 
-        # Download row
         dl_w = QWidget(); dl_l = QVBoxLayout(dl_w)
         dl_l.setContentsMargins(0, 12, 0, 12); dl_l.setSpacing(12)
         row1 = QHBoxLayout(); row1.setSpacing(10)
@@ -1681,8 +1859,6 @@ class VideoResultCard(QFrame):
         dl_l.addWidget(self.prog_w)
         rl.addWidget(dl_w); rl.addStretch()
         cl.addWidget(right, 1)
-
-    # ── Populate ──────────────────────────────────────────────────────────────
 
     def _populate(self, info: dict):
         size    = info.get('filesize') or info.get('filesize_approx')
@@ -1720,15 +1896,13 @@ class VideoResultCard(QFrame):
         self.dl_btn.setEnabled(True); self.dl_btn.setText('↓  Download')
         self.dl_btn.setStyleSheet('')
 
-    # ── Interaction ───────────────────────────────────────────────────────────
-
     def _set_fmt(self, key, _):
         self._active_fmt = key
         for k, b in self._pills.items():
             b.setProperty('active', k == key); b.style().unpolish(b); b.style().polish(b)
 
     def _start_dl(self):
-        out = QFileDialog.getExistingDirectory(self, 'Select Folder', str(Path.home() / 'Downloads'))
+        out = get_download_dir(self)
         if not out: return
         vi = self.vid_cb.currentIndex(); ai = self.aud_cb.currentIndex()
         vf = self._vid_ids[vi] if vi < len(self._vid_ids) else 'bestvideo'
@@ -1774,11 +1948,6 @@ class VideoResultCard(QFrame):
 
 
 # ────────────────────── Single video page ───────────────────────────────────
-#
-#  Key change: the search bar STAYS at the top always.
-#  Each new fetch APPENDS a VideoResultCard below.
-#  A "Clear all" button lets the user remove all fetched cards.
-#
 
 class SingleVideoPage(QWidget):
     download_saved = pyqtSignal(dict)
@@ -1790,7 +1959,6 @@ class SingleVideoPage(QWidget):
         self._build()
 
     def _build(self):
-        # Outer scroll area
         scroll = QScrollArea(self); scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         outer = QVBoxLayout(self); outer.setContentsMargins(0, 0, 0, 0)
@@ -1800,7 +1968,6 @@ class SingleVideoPage(QWidget):
         self._root = QVBoxLayout(self._container)
         self._root.setContentsMargins(0, 0, 0, 0); self._root.setSpacing(0)
 
-        # ── Persistent hero / search area (always visible) ────────────────────
         hero = QWidget()
         hl = QVBoxLayout(hero); hl.setContentsMargins(24, 60, 24, 36); hl.setSpacing(0)
         hl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -1821,7 +1988,6 @@ class SingleVideoPage(QWidget):
         sw = QWidget(); swl = QHBoxLayout(sw); swl.setContentsMargins(0, 10, 0, 32)
         swl.addStretch(); swl.addWidget(sub); swl.addStretch(); hl.addWidget(sw)
 
-        # Search bar row
         sbw = QWidget(); sbl = QHBoxLayout(sbw); sbl.setContentsMargins(0, 0, 0, 0)
         self.search = SearchBar('🔗', 'Paste a YouTube link…')
         self.search.setMaximumWidth(700)
@@ -1831,7 +1997,6 @@ class SingleVideoPage(QWidget):
 
         self._root.addWidget(hero)
 
-        # ── Toolbar row (Clear all button) ────────────────────────────────────
         self._toolbar = QWidget(); self._toolbar.setVisible(False)
         tb_l = QHBoxLayout(self._toolbar)
         tb_l.setContentsMargins(24, 0, 24, 12); tb_l.setSpacing(8)
@@ -1843,14 +2008,11 @@ class SingleVideoPage(QWidget):
         tb_l.addWidget(clr_btn)
         self._root.addWidget(self._toolbar)
 
-        # ── Cards container ───────────────────────────────────────────────────
         self._cards_w = QWidget()
         self._cards_l = QVBoxLayout(self._cards_w)
         self._cards_l.setContentsMargins(24, 0, 24, 60); self._cards_l.setSpacing(20)
         self._root.addWidget(self._cards_w)
         self._root.addStretch()
-
-    # ── Fetch ─────────────────────────────────────────────────────────────────
 
     def _fetch(self, url: str):
         clean = normalize_video_url(url)
@@ -1862,7 +2024,6 @@ class SingleVideoPage(QWidget):
         w.info_ready.connect(self._on_info)
         w.error.connect(lambda e: self.search.set_error(e[:140]))
         w.start()
-        # keep a reference
         self._workers[f'info_{id(w)}'] = w
 
     def _on_info(self, info: dict):
@@ -1875,14 +2036,12 @@ class SingleVideoPage(QWidget):
         n = len(self._cards)
         self._count_lbl.setText(f"{n} video{'s' if n != 1 else ''} fetched")
 
-        # Smooth reveal animation
         anim = QPropertyAnimation(card, QByteArray(b'maximumHeight'))
         anim.setDuration(350)
         anim.setEasingCurve(QEasingCurve.Type.OutCubic)
         anim.setStartValue(0)
         anim.setEndValue(500)
         anim.start()
-        # keep reference so GC doesn't kill it
         self._workers[f'anim_{id(card)}'] = anim
 
     def _clear_cards(self):
@@ -2117,7 +2276,7 @@ class PlaylistPage(QWidget):
         self.sel_all_btn.setText('Deselect All' if not all_checked else 'Select All')
 
     def _dl_one_now(self, row):
-        out = QFileDialog.getExistingDirectory(self, 'Select Folder', str(Path.home() / 'Downloads'))
+        out = get_download_dir(self)
         if not out: return
         vi  = row._vc.currentIndex(); ai = row._ac.currentIndex()
         vf  = row._vids[vi] if vi < len(row._vids) else 'bestvideo'
@@ -2153,7 +2312,7 @@ class PlaylistPage(QWidget):
         self.search.set_error(msg[:80])
 
     def _dl_selected(self):
-        out = QFileDialog.getExistingDirectory(self, 'Select Folder', str(Path.home() / 'Downloads'))
+        out = get_download_dir(self)
         if not out: return
         qi   = self.batch_q.currentIndex()
         vmap = {0: 'bestvideo', 1: 'bestvideo[height<=1080]', 2: 'bestvideo[height<=720]',
@@ -2397,6 +2556,7 @@ class ConsolePanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName('slidePanel')
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(0)
         hdr = QWidget(); hdr.setObjectName('panelHeader')
         hl  = QHBoxLayout(hdr); hl.setContentsMargins(20, 0, 12, 0); hl.setSpacing(8)
@@ -2427,119 +2587,394 @@ class ConsolePanel(QWidget):
         c.insertText(t, fmt); self.te.ensureCursorVisible()
 
 
-# ────────────────────── Settings panel ──────────────────────────────────────
+# ────────────────────── Settings overlay (centered modal popup) ──────────────
+
+class SettingsOverlay(QWidget):
+    """Semi-transparent dark overlay behind the settings modal."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.setStyleSheet('background:rgba(0,0,0,0.55);')
+
+    def mousePressEvent(self, e):
+        # clicking the overlay closes the modal
+        self.parent()._close_set()
+
 
 class SettingsPanel(QWidget):
-    close_clicked    = pyqtSignal()
-    nav_pos_changed  = pyqtSignal(str)
-    bg_anim_changed  = pyqtSignal(bool)
+    close_clicked            = pyqtSignal()
+    nav_pos_changed          = pyqtSignal(str)
+    bg_anim_changed          = pyqtSignal(bool)
     cursor_color_changed     = pyqtSignal(str)
     top_glow_color_changed   = pyqtSignal(str)
     corner_glow_color_changed= pyqtSignal(str)
+    font_changed             = pyqtSignal(str)
+    splash_font_changed      = pyqtSignal(str)
+    settings_blur_changed    = pyqtSignal(int)
+
+    DEFAULT_FONT        = 'Outfit'
+    DEFAULT_SPLASH_FONT = 'Outfit'
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName('slidePanel')
+        self.setObjectName('settingsModal')
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         d = load_data()
-        self._pending          = d.get('nav_position', 'top')
-        self._bg_enabled       = d.get('bg_animate', True)
-        self._cursor_color     = d.get('cursor_color', '#3b82f6')
-        self._top_glow_color   = d.get('top_glow_color', '#3b82f6')
-        self._corner_glow_color= d.get('corner_glow_color', '#7c3aed')
+        self._pending           = d.get('nav_position',      'top')
+        self._bg_enabled        = d.get('bg_animate',        True)
+        self._cursor_color      = d.get('cursor_color',      '#3b82f6')
+        self._top_glow_color    = d.get('top_glow_color',    '#3b82f6')
+        self._corner_glow_color = d.get('corner_glow_color', '#7c3aed')
+        self._font_family       = d.get('font_family',       self.DEFAULT_FONT)
+        self._splash_font       = d.get('splash_font',       self.DEFAULT_SPLASH_FONT)
+        self._splash_enabled    = d.get('splash_enabled',    True)
+        self._download_folder   = d.get('download_folder',   '')
+        self._ask_dl_folder     = d.get('ask_download_folder', True)
+        self._settings_blur     = d.get('settings_blur',     18)
 
-        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(0)
+        # helpers ─────────────────────────────────────────────────────────────
+        def lbl(text, obj, wrap=False):
+            l = QLabel(text); l.setObjectName(obj)
+            if wrap: l.setWordWrap(True)
+            return l
 
-        hdr = QWidget(); hdr.setObjectName('panelHeader')
-        hl  = QHBoxLayout(hdr); hl.setContentsMargins(20, 0, 12, 0); hl.setSpacing(8)
-        dot = BreatheDot(C['accent'], 6); title = mk_lbl('SETTINGS', 'panelSub')
-        hl.addWidget(dot); hl.addWidget(title); hl.addStretch()
-        x = QPushButton('✕'); x.setObjectName('panelCloseBtn')
-        x.setCursor(Qt.CursorShape.PointingHandCursor)
-        x.clicked.connect(self.close_clicked.emit); hl.addWidget(x)
-        lay.addWidget(hdr)
+        def sec_label(text):
+            l = lbl(text, 'sSecLabel')
+            w = QWidget(); lay = QHBoxLayout(w)
+            lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(10)
+            line_l = QFrame(); line_l.setFixedHeight(1)
+            line_l.setStyleSheet('background:rgba(255,255,255,0.06);')
+            line_r = QFrame(); line_r.setFixedHeight(1)
+            line_r.setStyleSheet('background:rgba(255,255,255,0.06);')
+            lay.addWidget(line_l, 1); lay.addWidget(l); lay.addWidget(line_r, 1)
+            return w
 
+        def row(title_text, desc_text=None, right_widget=None):
+            """Standard two-line info row with optional right-side control."""
+            f = QFrame(); f.setObjectName('sRow')
+            fl = QHBoxLayout(f); fl.setContentsMargins(18, 14, 18, 14); fl.setSpacing(16)
+            txt_col = QVBoxLayout(); txt_col.setSpacing(3)
+            txt_col.addWidget(lbl(title_text, 'sRowTitle'))
+            if desc_text:
+                txt_col.addWidget(lbl(desc_text, 'sRowDesc'))
+            fl.addLayout(txt_col, 1)
+            if right_widget:
+                fl.addWidget(right_widget)
+            return f
+
+        def ghost_btn(text, danger=False):
+            b = QPushButton(text); b.setObjectName('sGhostBtn')
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            if danger:
+                b.setProperty('danger', True)
+            return b
+
+        # ── Card ──────────────────────────────────────────────────────────────
+        outer = QVBoxLayout(self); outer.setContentsMargins(0, 0, 0, 0)
+        card = QFrame(); card.setObjectName('settingsCard')
+        card.setFixedWidth(580)
+        card_lay = QVBoxLayout(card); card_lay.setContentsMargins(0, 0, 0, 0); card_lay.setSpacing(0)
+        outer.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # ── Header ────────────────────────────────────────────────────────────
+        hdr = QWidget(); hdr.setObjectName('sHdr')
+        hl = QHBoxLayout(hdr); hl.setContentsMargins(26, 0, 20, 0); hl.setSpacing(0)
+
+        title_col = QVBoxLayout(); title_col.setSpacing(2)
+        title_col.addWidget(lbl('Settings', 'sHdrTitle'))
+        title_col.addWidget(lbl('Appearance & system preferences', 'sHdrSub'))
+        hl.addLayout(title_col)
+        hl.addStretch()
+
+        close_btn = QPushButton('×'); close_btn.setObjectName('sCloseBtn')
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        close_btn.clicked.connect(self.close_clicked.emit)
+        hl.addWidget(close_btn)
+        card_lay.addWidget(hdr)
+
+        # thin gradient rule under header
+        rule = QFrame(); rule.setFixedHeight(1)
+        rule.setStyleSheet(
+            f'background:qlineargradient(x1:0,y1:0,x2:1,y2:0,'
+            f'stop:0 transparent, stop:0.2 rgba(59,130,246,0.35),'
+            f'stop:0.6 rgba(59,130,246,0.10), stop:1 transparent);'
+        )
+        card_lay.addWidget(rule)
+
+        # ── Scrollable body ───────────────────────────────────────────────────
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        body = QWidget(); bl = QVBoxLayout(body)
-        bl.setContentsMargins(24, 28, 24, 28); bl.setSpacing(22)
+        scroll.setStyleSheet('background:transparent; border:none;')
+        body = QWidget(); body.setStyleSheet('background:transparent;')
+        bl = QVBoxLayout(body); bl.setContentsMargins(22, 22, 22, 8); bl.setSpacing(6)
         scroll.setWidget(body)
+        card_lay.addWidget(scroll, 1)
 
-        bl.addWidget(mk_lbl('NAV BAR POSITION', 'panelSub'))
-        br = QHBoxLayout(); br.setSpacing(12)
-        self.btn_top = QPushButton('⬆  Top'); self.btn_top.setObjectName('posBtnTop')
-        self.btn_top.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_top.clicked.connect(lambda: self._pick('top'))
-        self.btn_bot = QPushButton('⬇  Bottom'); self.btn_bot.setObjectName('posBtnBottom')
-        self.btn_bot.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_bot.clicked.connect(lambda: self._pick('bottom'))
-        br.addWidget(self.btn_top); br.addWidget(self.btn_bot); bl.addLayout(br)
-        bl.addWidget(mk_lbl('Tab bar moves to top or bottom of the window.', 'monoSmall', wrap=True))
-        bl.addWidget(self._div())
+        # ── SECTION: DISPLAY ─────────────────────────────────────────────────
+        bl.addWidget(sec_label('DISPLAY'))
+        bl.addSpacing(4)
 
-        bl.addWidget(mk_lbl('BACKGROUND ANIMATION', 'panelSub'))
-        bg_row = QHBoxLayout(); bg_row.setSpacing(12)
-        bg_desc = mk_lbl('Moving squares in background', 'statusInfo')
-        bg_row.addWidget(bg_desc, 1)
-        self.bg_toggle = QPushButton('Enabled' if self._bg_enabled else 'Disabled')
-        self.bg_toggle.setObjectName('toggleBtn')
+        # Nav position — single toggle button
+        self.btn_nav_toggle = QPushButton()
+        self.btn_nav_toggle.setObjectName('sToggleBtn')
+        self.btn_nav_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_nav_toggle.clicked.connect(self._toggle_nav_pos)
+        bl.addWidget(row('Navigation Bar Position',
+                         'Click to toggle the tab bar between top and bottom',
+                         self.btn_nav_toggle))
+
+        bl.addSpacing(4)
+
+        # Background animation toggle row
+        self.bg_toggle = QPushButton(); self.bg_toggle.setObjectName('sToggleBtn')
         self.bg_toggle.setProperty('on', self._bg_enabled)
+        self.bg_toggle.setText('ON' if self._bg_enabled else 'OFF')
         self.bg_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
         self.bg_toggle.clicked.connect(self._toggle_bg)
-        bg_row.addWidget(self.bg_toggle); bl.addLayout(bg_row)
-        bl.addWidget(mk_lbl('Disable for better performance on slower systems.', 'monoSmall', wrap=True))
-        bl.addWidget(self._div())
+        bl.addWidget(row('Background Animation',
+                         'Animated squares behind the UI — disable on slower systems',
+                         self.bg_toggle))
 
-        bl.addWidget(mk_lbl('CURSOR & CLICK GLOW', 'panelSub'))
-        cg_row = QHBoxLayout(); cg_row.setSpacing(10)
-        cg_row.addWidget(mk_lbl('Glow colour', 'statusInfo'), 1)
+        bl.addSpacing(4)
+
+        # Splash screen toggle row
+        self.splash_toggle = QPushButton(); self.splash_toggle.setObjectName('sToggleBtn')
+        self.splash_toggle.setProperty('on', self._splash_enabled)
+        self.splash_toggle.setText('ON' if self._splash_enabled else 'OFF')
+        self.splash_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.splash_toggle.clicked.connect(self._toggle_splash)
+        bl.addWidget(row('Splash Screen',
+                         'Show the animated intro screen every time Prism starts',
+                         self.splash_toggle))
+
+        bl.addSpacing(4)
+
+        # Settings panel blur slider
+        blur_card = QFrame(); blur_card.setObjectName('sRow')
+        blur_cl = QVBoxLayout(blur_card); blur_cl.setContentsMargins(18, 14, 18, 14); blur_cl.setSpacing(8)
+        blur_top = QHBoxLayout(); blur_top.setSpacing(0)
+        blur_top.addWidget(lbl('Settings Panel Background Blur', 'sRowTitle'))
+        blur_top.addStretch()
+        self._blur_val_lbl = lbl(f'{self._settings_blur}px', 'sRowDesc')
+        blur_top.addWidget(self._blur_val_lbl)
+        blur_cl.addLayout(blur_top)
+        blur_cl.addWidget(lbl('Controls frosted-glass blur intensity behind the settings panel', 'sRowDesc'))
+        self.blur_slider = QSlider(Qt.Orientation.Horizontal)
+        self.blur_slider.setMinimum(0); self.blur_slider.setMaximum(40)
+        self.blur_slider.setValue(self._settings_blur)
+        self.blur_slider.setStyleSheet(f"""
+            QSlider::groove:horizontal {{
+                background: rgba(255,255,255,0.08); border-radius: 3px; height: 6px;
+            }}
+            QSlider::handle:horizontal {{
+                background: {C['accent']}; border-radius: 7px;
+                width: 14px; height: 14px; margin: -4px 0;
+            }}
+            QSlider::sub-page:horizontal {{
+                background: {C['accent']}; border-radius: 3px;
+            }}
+        """)
+        self.blur_slider.valueChanged.connect(self._on_blur_changed)
+        blur_cl.addWidget(self.blur_slider)
+        bl.addWidget(blur_card)
+
+        bl.addSpacing(18)
+
+        # ── SECTION: COLOURS ─────────────────────────────────────────────────
+        bl.addWidget(sec_label('COLOURS'))
+        bl.addSpacing(4)
+
+        # Cursor glow
         self.cursor_btn = ColorPickerBtn(self._cursor_color)
         self.cursor_btn.color_changed.connect(self._on_cursor_color)
-        cg_row.addWidget(self.cursor_btn); bl.addLayout(cg_row)
-        bl.addWidget(mk_lbl(
-            'Sets the colour of the radial glow that follows your cursor\nand flashes when you click.',
-            'monoSmall', wrap=True))
-        bl.addWidget(self._div())
+        bl.addWidget(row('Cursor & Click Glow',
+                         'Radial halo that follows your cursor and pulses on click',
+                         self.cursor_btn))
+        bl.addSpacing(4)
 
-        bl.addWidget(mk_lbl('BACKGROUND GLOW', 'panelSub'))
-        tg_row = QHBoxLayout(); tg_row.setSpacing(10)
-        tg_row.addWidget(mk_lbl('Top glow colour', 'statusInfo'), 1)
+        # Background glows
+        glow_card = QFrame(); glow_card.setObjectName('sRow')
+        gcl = QVBoxLayout(glow_card); gcl.setContentsMargins(18, 14, 18, 14); gcl.setSpacing(10)
+        gcl.addWidget(lbl('Background Glow', 'sRowTitle'))
+        gcl.addWidget(lbl('Ambient light bleeding from the edges of the window', 'sRowDesc'))
+        gcl.addSpacing(4)
+
+        glow_top_row = QHBoxLayout(); glow_top_row.setSpacing(12)
+        glow_top_row.addWidget(lbl('Top centre', 'sRowDesc'), 1)
         self.top_glow_btn = ColorPickerBtn(self._top_glow_color)
         self.top_glow_btn.color_changed.connect(self._on_top_glow)
-        tg_row.addWidget(self.top_glow_btn); bl.addLayout(tg_row)
-        cng_row = QHBoxLayout(); cng_row.setSpacing(10)
-        cng_row.addWidget(mk_lbl('Corner glow colour', 'statusInfo'), 1)
+        glow_top_row.addWidget(self.top_glow_btn)
+
+        glow_sep = QFrame(); glow_sep.setFixedHeight(1)
+        glow_sep.setStyleSheet('background:rgba(255,255,255,0.045); margin:0 0;')
+
+        glow_corner_row = QHBoxLayout(); glow_corner_row.setSpacing(12)
+        glow_corner_row.addWidget(lbl('Bottom corner', 'sRowDesc'), 1)
         self.corner_glow_btn = ColorPickerBtn(self._corner_glow_color)
         self.corner_glow_btn.color_changed.connect(self._on_corner_glow)
-        cng_row.addWidget(self.corner_glow_btn); bl.addLayout(cng_row)
-        bl.addWidget(mk_lbl(
-            'Top glow radiates from the top-centre of the window.\nCorner glow radiates from the bottom-right corner.',
-            'monoSmall', wrap=True))
-        bl.addWidget(self._div())
+        glow_corner_row.addWidget(self.corner_glow_btn)
 
-        self.save_btn = QPushButton('  Save Settings  ↓')
-        self.save_btn.setObjectName('saveSettingsBtn')
+        gcl.addLayout(glow_top_row); gcl.addWidget(glow_sep); gcl.addLayout(glow_corner_row)
+        bl.addWidget(glow_card)
+
+        bl.addSpacing(18)
+
+        # ── SECTION: TYPOGRAPHY ───────────────────────────────────────────────
+        bl.addWidget(sec_label('TYPOGRAPHY'))
+        bl.addSpacing(4)
+
+        font_card = QFrame(); font_card.setObjectName('sRow')
+        fcl = QVBoxLayout(font_card); fcl.setContentsMargins(18, 14, 18, 14); fcl.setSpacing(10)
+        font_title_row = QHBoxLayout(); font_title_row.setSpacing(0)
+        font_title_row.addWidget(lbl('Application Font', 'sRowTitle'))
+        font_title_row.addStretch()
+        self.reset_font_btn = ghost_btn('Reset', danger=True)
+        self.reset_font_btn.setToolTip(f'Restore default ({self.DEFAULT_FONT})')
+        self.reset_font_btn.clicked.connect(self._reset_font)
+        font_title_row.addWidget(self.reset_font_btn)
+        fcl.addLayout(font_title_row)
+        fcl.addWidget(lbl(f'Applies across the entire application  —  Default: {self.DEFAULT_FONT}', 'sRowDesc'))
+
+        self.font_combo = QFontComboBox(); self.font_combo.setObjectName('sFontCombo')
+        self.font_combo.setCurrentFont(QFont(self._font_family))
+        self.font_combo.currentFontChanged.connect(self._on_font_changed)
+        fcl.addWidget(self.font_combo)
+        bl.addWidget(font_card)
+
+        bl.addSpacing(4)
+
+        # Welcome screen font
+        splash_card = QFrame(); splash_card.setObjectName('sRow')
+        scl = QVBoxLayout(splash_card); scl.setContentsMargins(18, 14, 18, 14); scl.setSpacing(10)
+        splash_title_row = QHBoxLayout(); splash_title_row.setSpacing(0)
+        splash_title_row.addWidget(lbl('Welcome Screen Font', 'sRowTitle'))
+        splash_title_row.addStretch()
+        self.reset_splash_font_btn = ghost_btn('Reset', danger=True)
+        self.reset_splash_font_btn.setToolTip(f'Restore default ({self.DEFAULT_SPLASH_FONT})')
+        self.reset_splash_font_btn.clicked.connect(self._reset_splash_font)
+        splash_title_row.addWidget(self.reset_splash_font_btn)
+        scl.addLayout(splash_title_row)
+        scl.addWidget(lbl(f'Font used for "PRISM" on the intro screen  —  Default: {self.DEFAULT_SPLASH_FONT}', 'sRowDesc'))
+        self.splash_font_combo = QFontComboBox(); self.splash_font_combo.setObjectName('sFontCombo')
+        self.splash_font_combo.setCurrentFont(QFont(self._splash_font))
+        self.splash_font_combo.currentFontChanged.connect(self._on_splash_font_changed)
+        scl.addWidget(self.splash_font_combo)
+        bl.addWidget(splash_card)
+
+        bl.addSpacing(18)
+
+        # ── SECTION: DOWNLOAD ─────────────────────────────────────────────────
+        bl.addWidget(sec_label('DOWNLOAD'))
+        bl.addSpacing(4)
+
+        dl_card = QFrame(); dl_card.setObjectName('sRow')
+        dlcl = QVBoxLayout(dl_card); dlcl.setContentsMargins(18, 14, 18, 14); dlcl.setSpacing(12)
+
+        # Ask every time checkbox
+        ask_row = QHBoxLayout(); ask_row.setSpacing(12)
+        self.ask_dl_chk = QCheckBox()
+        self.ask_dl_chk.setChecked(self._ask_dl_folder)
+        self.ask_dl_chk.toggled.connect(self._on_ask_dl_toggled)
+        ask_txt = QVBoxLayout(); ask_txt.setSpacing(2)
+        ask_txt.addWidget(lbl('Ask for folder every time', 'sRowTitle'))
+        ask_txt.addWidget(lbl('A folder picker appears each time you start a download', 'sRowDesc'))
+        ask_row.addWidget(self.ask_dl_chk, 0, Qt.AlignmentFlag.AlignTop)
+        ask_row.addLayout(ask_txt, 1)
+        dlcl.addLayout(ask_row)
+
+        # Separator line
+        sep = QFrame(); sep.setFixedHeight(1)
+        sep.setStyleSheet('background:rgba(255,255,255,0.045);')
+        dlcl.addWidget(sep)
+
+        # Download folder row
+        dl_folder_row = QHBoxLayout(); dl_folder_row.setSpacing(0)
+        dl_folder_row.addWidget(lbl('Download Folder', 'sRowTitle'))
+        dl_folder_row.addStretch()
+        self.dl_folder_btn = ghost_btn('Browse…')
+        self.dl_folder_btn.clicked.connect(self._pick_dl_folder)
+        dl_folder_row.addWidget(self.dl_folder_btn)
+        dlcl.addLayout(dl_folder_row)
+        dlcl.addWidget(lbl('All downloads go here automatically — disables the per-download prompt above', 'sRowDesc'))
+        path_str = self._download_folder if self._download_folder else '— Not set —'
+        self.dl_path_lbl = lbl(path_str, 'sPathLbl', wrap=True)
+        dlcl.addWidget(self.dl_path_lbl)
+
+        # Clear folder button
+        clear_dl_row = QHBoxLayout()
+        clear_dl_row.addStretch()
+        self.clear_dl_btn = ghost_btn('Clear Folder', danger=True)
+        self.clear_dl_btn.clicked.connect(self._clear_dl_folder)
+        self.clear_dl_btn.setVisible(bool(self._download_folder))
+        clear_dl_row.addWidget(self.clear_dl_btn)
+        dlcl.addLayout(clear_dl_row)
+
+        bl.addWidget(dl_card)
+
+        bl.addSpacing(18)
+
+        # ── SECTION: STORAGE ──────────────────────────────────────────────────
+        bl.addWidget(sec_label('STORAGE'))
+        bl.addSpacing(4)
+
+        storage_card = QFrame(); storage_card.setObjectName('sRow')
+        stcl = QVBoxLayout(storage_card); stcl.setContentsMargins(18, 14, 18, 14); stcl.setSpacing(4)
+        stcl.addWidget(lbl('Storage Location', 'sRowTitle'))
+        stcl.addWidget(lbl('All settings, preferences and download history are stored in:', 'sRowDesc'))
+        stcl.addWidget(lbl(str(DATA_FILE), 'sPathLbl', wrap=True))
+        bl.addWidget(storage_card)
+
+        bl.addStretch(1)
+
+        # ── Footer ────────────────────────────────────────────────────────────
+        footer = QWidget(); footer.setObjectName('sFooter')
+        fl = QHBoxLayout(footer); fl.setContentsMargins(22, 0, 22, 0); fl.setSpacing(10)
+        fl.addStretch()
+
+        cancel_btn = QPushButton('Cancel'); cancel_btn.setObjectName('sCancelBtn')
+        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        cancel_btn.clicked.connect(self.close_clicked.emit)
+
+        self.save_btn = QPushButton('Save Settings'); self.save_btn.setObjectName('sSaveBtn')
         self.save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.save_btn.clicked.connect(self._save)
-        sr = QHBoxLayout(); sr.addStretch(); sr.addWidget(self.save_btn); sr.addStretch()
-        bl.addLayout(sr); bl.addStretch()
-        lay.addWidget(scroll, 1)
+
+        fl.addWidget(cancel_btn); fl.addWidget(self.save_btn)
+        card_lay.addWidget(footer)
+
         self._refresh_nav()
 
     def _div(self):
         f = QFrame(); f.setFrameShape(QFrame.Shape.HLine)
-        f.setStyleSheet(f"background:{C['border']};max-height:1px;border:none;")
+        f.setStyleSheet(f"background:{C['border']};max-height:1px;border:none;margin-bottom:18px;")
         return f
 
     def _pick(self, pos):
         self._pending = pos; self._refresh_nav()
 
+    def _toggle_nav_pos(self):
+        self._pending = 'bottom' if self._pending == 'top' else 'top'
+        self._refresh_nav()
+
     def _toggle_bg(self):
         self._bg_enabled = not self._bg_enabled
-        self.bg_toggle.setText('Enabled' if self._bg_enabled else 'Disabled')
+        self.bg_toggle.setText('ON' if self._bg_enabled else 'OFF')
         self.bg_toggle.setProperty('on', self._bg_enabled)
         self.bg_toggle.style().unpolish(self.bg_toggle)
         self.bg_toggle.style().polish(self.bg_toggle)
         self.bg_anim_changed.emit(self._bg_enabled)
+
+    def _toggle_splash(self):
+        self._splash_enabled = not self._splash_enabled
+        self.splash_toggle.setText('ON' if self._splash_enabled else 'OFF')
+        self.splash_toggle.setProperty('on', self._splash_enabled)
+        self.splash_toggle.style().unpolish(self.splash_toggle)
+        self.splash_toggle.style().polish(self.splash_toggle)
+
+    def _on_blur_changed(self, val: int):
+        self._settings_blur = val
+        self._blur_val_lbl.setText(f'{val}px')
+        self.settings_blur_changed.emit(val)
 
     def _on_cursor_color(self, color: str):
         self._cursor_color = color; self.cursor_color_changed.emit(color)
@@ -2550,31 +2985,103 @@ class SettingsPanel(QWidget):
     def _on_corner_glow(self, color: str):
         self._corner_glow_color = color; self.corner_glow_color_changed.emit(color)
 
+    def _on_font_changed(self, font: QFont):
+        self._font_family = font.family()
+
+    def _on_splash_font_changed(self, font: QFont):
+        self._splash_font = font.family()
+
+    def _reset_font(self):
+        self._font_family = self.DEFAULT_FONT
+        self.font_combo.setCurrentFont(QFont(self.DEFAULT_FONT))
+        self.reset_font_btn.setText('Done')
+        QTimer.singleShot(1200, lambda: self.reset_font_btn.setText('Reset'))
+
+    def _reset_splash_font(self):
+        self._splash_font = self.DEFAULT_SPLASH_FONT
+        self.splash_font_combo.setCurrentFont(QFont(self.DEFAULT_SPLASH_FONT))
+        self.reset_splash_font_btn.setText('Done')
+        QTimer.singleShot(1200, lambda: self.reset_splash_font_btn.setText('Reset'))
+
+    def _pick_dl_folder(self):
+        folder = QFileDialog.getExistingDirectory(
+            self, 'Choose Download Folder', self._download_folder or str(Path.home() / 'Downloads'),
+            QFileDialog.Option.ShowDirsOnly
+        )
+        if folder:
+            self._download_folder = folder
+            self.dl_path_lbl.setText(folder)
+            self.clear_dl_btn.setVisible(True)
+            # Having a folder set → disable "ask every time"
+            self._ask_dl_folder = False
+            self.ask_dl_chk.setChecked(False)
+            self.ask_dl_chk.setEnabled(False)
+            self.dl_folder_btn.setText('Folder Set ✓')
+            QTimer.singleShot(1800, lambda: self.dl_folder_btn.setText('Browse…'))
+
+    def _clear_dl_folder(self):
+        self._download_folder = ''
+        self.dl_path_lbl.setText('— Not set —')
+        self.clear_dl_btn.setVisible(False)
+        self._ask_dl_folder = True
+        self.ask_dl_chk.setChecked(True)
+        self.ask_dl_chk.setEnabled(True)
+
+    def _on_ask_dl_toggled(self, checked: bool):
+        self._ask_dl_folder = checked
+
     def _refresh_nav(self):
-        self.btn_top.setProperty('active', self._pending == 'top')
-        self.btn_top.style().unpolish(self.btn_top); self.btn_top.style().polish(self.btn_top)
-        self.btn_bot.setProperty('active', self._pending == 'bottom')
-        self.btn_bot.style().unpolish(self.btn_bot); self.btn_bot.style().polish(self.btn_bot)
+        is_top = self._pending == 'top'
+        self.btn_nav_toggle.setText('⬆  Top' if is_top else '⬇  Bottom')
+        self.btn_nav_toggle.setProperty('on', is_top)
+        self.btn_nav_toggle.style().unpolish(self.btn_nav_toggle)
+        self.btn_nav_toggle.style().polish(self.btn_nav_toggle)
 
     def _save(self):
         d = load_data()
-        d['nav_position']       = self._pending
-        d['bg_animate']         = self._bg_enabled
-        d['cursor_color']       = self._cursor_color
-        d['top_glow_color']     = self._top_glow_color
-        d['corner_glow_color']  = self._corner_glow_color
+        d['nav_position']        = self._pending
+        d['bg_animate']          = self._bg_enabled
+        d['cursor_color']        = self._cursor_color
+        d['top_glow_color']      = self._top_glow_color
+        d['corner_glow_color']   = self._corner_glow_color
+        d['font_family']         = self._font_family
+        d['splash_font']         = self._splash_font
+        d['splash_enabled']      = self._splash_enabled
+        d['settings_blur']       = self._settings_blur
+        d['download_folder']     = self._download_folder
+        d['ask_download_folder'] = self._ask_dl_folder
+        # Record settings change in history
+        snap = {
+            'changed_at':           datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'nav_position':         self._pending,
+            'bg_animate':           self._bg_enabled,
+            'cursor_color':         self._cursor_color,
+            'top_glow_color':       self._top_glow_color,
+            'corner_glow_color':    self._corner_glow_color,
+            'font_family':          self._font_family,
+            'splash_font':          self._splash_font,
+            'splash_enabled':       self._splash_enabled,
+            'settings_blur':        self._settings_blur,
+            'download_folder':      self._download_folder,
+            'ask_download_folder':  self._ask_dl_folder,
+        }
+        hist = d.get('settings_history', [])
+        hist.insert(0, snap)
+        d['settings_history'] = hist[:100]   # keep last 100 snapshots
         save_data(d)
-        print(f'[Prism] Settings saved → nav={self._pending}')
+        print(f'[Prism] Settings saved → nav={self._pending}, font={self._font_family}')
         self.nav_pos_changed.emit(self._pending)
-        self.save_btn.setText('✓  Saved!')
-        QTimer.singleShot(1600, lambda: self.save_btn.setText('  Save Settings  ↓'))
+        self.font_changed.emit(self._font_family)
+        self.save_btn.setText('Saved ✓')
+        QTimer.singleShot(1600, lambda: self.save_btn.setText('Save Settings'))
+        QTimer.singleShot(800, self.close_clicked.emit)
 
     def sync_pos(self, pos):
         self._pending = pos; self._refresh_nav()
 
     def sync_bg(self, val: bool):
         self._bg_enabled = val
-        self.bg_toggle.setText('Enabled' if val else 'Disabled')
+        self.bg_toggle.setText('ON' if val else 'OFF')
         self.bg_toggle.setProperty('on', val)
         self.bg_toggle.style().unpolish(self.bg_toggle)
         self.bg_toggle.style().polish(self.bg_toggle)
@@ -2587,6 +3094,40 @@ class SettingsPanel(QWidget):
 
     def sync_corner_glow(self, color: str):
         self._corner_glow_color = color; self.corner_glow_btn.set_color(color)
+
+    def sync_font(self, family: str):
+        self._font_family = family
+        self.font_combo.setCurrentFont(QFont(family))
+
+    def sync_splash_font(self, family: str):
+        self._splash_font = family
+        self.splash_font_combo.setCurrentFont(QFont(family))
+
+    def sync_download_folder(self, folder: str):
+        self._download_folder = folder
+        self.dl_path_lbl.setText(folder if folder else '— Not set —')
+        self.clear_dl_btn.setVisible(bool(folder))
+        if folder:
+            self.ask_dl_chk.setChecked(False)
+            self.ask_dl_chk.setEnabled(False)
+        else:
+            self.ask_dl_chk.setEnabled(True)
+
+    def sync_ask_dl_folder(self, val: bool):
+        self._ask_dl_folder = val
+        self.ask_dl_chk.setChecked(val)
+
+    def sync_splash_enabled(self, val: bool):
+        self._splash_enabled = val
+        self.splash_toggle.setText('ON' if val else 'OFF')
+        self.splash_toggle.setProperty('on', val)
+        self.splash_toggle.style().unpolish(self.splash_toggle)
+        self.splash_toggle.style().polish(self.splash_toggle)
+
+    def sync_settings_blur(self, val: int):
+        self._settings_blur = val
+        self.blur_slider.setValue(val)
+        self._blur_val_lbl.setText(f'{val}px')
 
 
 # ────────────────────── Logo bar ────────────────────────────────────────────
@@ -2714,6 +3255,8 @@ class NexusApp(QMainWindow):
         self._set_anim = None
         self._nav_anim = None
         self._stk_anim = None
+        self._splash_active  = True
+        self._settings_blur  = 18   # default, overwritten by _load_prefs
         self._build()
         self._load_prefs()
         QApplication.instance().installEventFilter(self)
@@ -2741,7 +3284,14 @@ class NexusApp(QMainWindow):
         self.tab_nav.console_toggle.connect(self._on_con_toggle)
         self.tab_nav.settings_toggle.connect(self._on_set_toggle)
         self.con_panel = ConsolePanel(central)
+        # ── Settings: dark overlay + centered modal ────────────────────────
+        self.set_overlay = QWidget(central)
+        self.set_overlay.setStyleSheet('background:rgba(0,0,0,0.60);')
+        self.set_overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.set_overlay.mousePressEvent = lambda e: self._close_set()
+        self.set_overlay.hide()
         self.set_panel = SettingsPanel(central)
+        self.set_panel.hide()
         self.con_panel.close_clicked.connect(self._close_con)
         self.set_panel.close_clicked.connect(self._close_set)
         self.set_panel.nav_pos_changed.connect(self._animate_nav)
@@ -2749,18 +3299,127 @@ class NexusApp(QMainWindow):
         self.set_panel.cursor_color_changed.connect(self._on_cursor_color)
         self.set_panel.top_glow_color_changed.connect(self.bg_canvas.set_top_glow_color)
         self.set_panel.corner_glow_color_changed.connect(self.bg_canvas.set_corner_glow_color)
+        self.set_panel.font_changed.connect(self._apply_font)
+        self.set_panel.settings_blur_changed.connect(self._on_settings_blur)
         self.p_video.download_saved.connect(self._save_hist)
         self.p_playlist.download_saved.connect(self._save_hist)
         self.glow = CursorGlow(central, color=d.get('cursor_color', '#3b82f6'))
-        self._place_all()
+
+        # ── Splash overlay — covers everything, fades out when animation ends ──
+        splash_font    = d.get('splash_font',    'Outfit')
+        splash_enabled = d.get('splash_enabled', True)
+        if splash_enabled:
+            self.splash = HelloSplash(central, font_family=splash_font)
+            self.splash.finished.connect(self._dismiss_splash)
+            self._splash_active = True
+            # Hide all app UI — splash covers them; revealed by _dismiss_splash
+            self.bg_canvas.hide()
+            self.logo_bar.hide()
+            self.tab_nav.hide()
+            self.stack.hide()
+            self.con_panel.hide()
+            self.glow.hide()
+        else:
+            self.splash = None
+            self._splash_active = False
+            # App UI visible immediately
+
+    def _dismiss_splash(self):
+        """Fade splash out, then reveal the full app UI underneath."""
+        eff = QGraphicsOpacityEffect(self.splash)
+        self.splash.setGraphicsEffect(eff)
+        anim = QPropertyAnimation(eff, QByteArray(b'opacity'))
+        anim.setDuration(500)
+        anim.setEasingCurve(QEasingCurve.Type.InCubic)
+        anim.setStartValue(1.0)
+        anim.setEndValue(0.0)
+        def _on_done():
+            self._splash_active = False
+            self.splash.hide()
+            self.splash.setGraphicsEffect(None)
+            # Now reveal the real app
+            self.bg_canvas.show()
+            self.logo_bar.show()
+            self.tab_nav.show()
+            self.stack.show()
+            self.glow.show()
+            self._place_all()
+        anim.finished.connect(_on_done)
+        self._splash_anim = anim
+        anim.start()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        # First show — window now has real dimensions
+        if self._splash_active and self.splash is not None:
+            c = self.centralWidget()
+            W = c.width(); H = c.height()
+            self.splash.setGeometry(0, 0, W, H)
+            self.splash.raise_()
+            self.splash.show()
+        elif not self._splash_active:
+            # No splash — do initial layout now
+            self._place_all()
+
+    def _apply_font(self, family: str):
+        app = QApplication.instance()
+        if app:
+            f = QFont(family)
+            app.setFont(f)
+            # Update the stylesheet's font-family while keeping all other rules intact
+            new_ss = STYLESHEET.replace(
+                "font-family:'Outfit','Segoe UI','Ubuntu',sans-serif",
+                f"font-family:'{family}','Segoe UI','Ubuntu',sans-serif"
+            )
+            app.setStyleSheet(new_ss)
+        self.set_panel.sync_font(family)
+        print(f'[Prism] Font applied: {family}')
 
     def _on_cursor_color(self, color: str):
         self.glow.set_color(color)
+
+    def _on_settings_blur(self, val: int):
+        self._settings_blur = val
+        # Live-update both background blur and card opacity while panel is open
+        if self._set_open:
+            self._apply_settings_blur(val)
+
+    def _apply_settings_blur(self, val: int):
+        """
+        Two linked effects driven by a single 0-40 slider:
+          - Background (bg_canvas): blur radius = val  (frosted-glass effect)
+          - Settings card: opacity = val/40  (0 = fully transparent, 40 = fully opaque)
+        """
+        # 1. Background blur
+        if val > 0:
+            eff = QGraphicsBlurEffect()
+            eff.setBlurRadius(val)
+            self.bg_canvas.setGraphicsEffect(eff)
+        else:
+            self.bg_canvas.setGraphicsEffect(None)
+
+        # 2. Card opacity: map 0→40 to alpha 0.08→1.0
+        alpha = max(0.08, val / 40.0)
+        r, g, b = 10, 10, 18
+        self.set_panel.setStyleSheet(
+            f'#settingsCard {{ background: rgba({r},{g},{b},{alpha:.3f}); '
+            f'border: 1px solid rgba(255,255,255,{min(0.18, alpha * 0.18):.3f}); '
+            f'border-radius: 18px; }}'
+        )
 
     def _place_all(self):
         c = self.centralWidget()
         W = c.width()  or self.width()
         H = c.height() or self.height()
+        if W == 0 or H == 0:
+            return
+
+        # During splash: just keep it fullscreen, nothing else to layout
+        if self._splash_active:
+            self.splash.setGeometry(0, 0, W, H)
+            self.splash.raise_()
+            return
+
         lh = self.LOGO_H; nh = self.NAV_H; pw = self.PANEL_W
         self.bg_canvas.setGeometry(0, 0, W, H)
         self.glow.setGeometry(0, 0, W, H); self.glow.raise_()
@@ -2772,25 +3431,37 @@ class NexusApp(QMainWindow):
             self.tab_nav.setGeometry(0, H - nh, W, nh)
             self.stack.setGeometry(0, lh, W, H - lh - nh)
         cx = W - pw if self._con_open else W
-        sx = W - pw if self._set_open else W
         if self._con_anim is None or self._con_anim.state() != QAbstractAnimation.State.Running:
             self.con_panel.setGeometry(cx, 0, pw, H)
-        if self._set_anim is None or self._set_anim.state() != QAbstractAnimation.State.Running:
-            self.set_panel.setGeometry(sx, 0, pw, H)
+        # Settings overlay + modal
+        self.set_overlay.setGeometry(0, 0, W, H)
+        mw, mh = 620, min(700, H - 80)
+        mx = (W - mw) // 2; my = (H - mh) // 2
+        self.set_panel.setGeometry(mx, my, mw, mh)
         self.logo_bar.raise_(); self.tab_nav.raise_()
-        self.con_panel.raise_(); self.set_panel.raise_(); self.glow.raise_()
+        self.con_panel.raise_()
+        if self._set_open:
+            self.set_overlay.raise_(); self.set_panel.raise_()
+        self.glow.raise_()
 
     def resizeEvent(self, e):
         super().resizeEvent(e); self._place_all()
 
     def _load_prefs(self):
         d = load_data()
-        pos          = d.get('nav_position',      'top')
-        bg           = d.get('bg_animate',        True)
-        cursor_color = d.get('cursor_color',      '#3b82f6')
-        top_glow     = d.get('top_glow_color',    '#3b82f6')
-        corner_glow  = d.get('corner_glow_color', '#7c3aed')
-        self._nav_pos = pos
+        pos          = d.get('nav_position',       'top')
+        bg           = d.get('bg_animate',         True)
+        cursor_color = d.get('cursor_color',       '#3b82f6')
+        top_glow     = d.get('top_glow_color',     '#3b82f6')
+        corner_glow  = d.get('corner_glow_color',  '#7c3aed')
+        font_family  = d.get('font_family',        'Outfit')
+        splash_font  = d.get('splash_font',        'Outfit')
+        splash_en    = d.get('splash_enabled',     True)
+        blur_val     = d.get('settings_blur',      18)
+        dl_folder    = d.get('download_folder',    '')
+        ask_dl       = d.get('ask_download_folder', True)
+        self._nav_pos       = pos
+        self._settings_blur = blur_val
         self.tab_nav.set_bottom_style(pos == 'bottom')
         self.set_panel.sync_pos(pos)
         self.bg_canvas.set_enabled(bg)
@@ -2801,8 +3472,15 @@ class NexusApp(QMainWindow):
         self.set_panel.sync_cursor_color(cursor_color)
         self.set_panel.sync_top_glow(top_glow)
         self.set_panel.sync_corner_glow(corner_glow)
+        self.set_panel.sync_font(font_family)
+        self.set_panel.sync_splash_font(splash_font)
+        self.set_panel.sync_splash_enabled(splash_en)
+        self.set_panel.sync_settings_blur(blur_val)
+        self.set_panel.sync_download_folder(dl_folder)
+        self.set_panel.sync_ask_dl_folder(ask_dl)
+        self._apply_font(font_family)
         self._place_all()
-        print(f'[Prism] Prefs loaded: nav={pos}')
+        print(f'[Prism] Prefs loaded: nav={pos}, font={font_family}, splash={splash_en}, blur={blur_val}')
 
     def _save_hist(self, entry):
         d = load_data(); d['history'].insert(0, entry); d['history'] = d['history'][:500]
@@ -2834,7 +3512,31 @@ class NexusApp(QMainWindow):
         self._slide(self.con_panel, open_it, '_con_anim', '_con_open')
 
     def _on_set_toggle(self, open_it: bool):
-        self._slide(self.set_panel, open_it, '_set_anim', '_set_open')
+        if open_it:
+            self._set_open = True
+            self._place_all()
+            # Apply background blur + card opacity from saved value
+            self._apply_settings_blur(self._settings_blur)
+            # Fade in overlay
+            self.set_overlay.show()
+            self.set_panel.show()
+            eff_ov = QGraphicsOpacityEffect(self.set_overlay)
+            self.set_overlay.setGraphicsEffect(eff_ov)
+            eff_modal = QGraphicsOpacityEffect(self.set_panel)
+            self.set_panel.setGraphicsEffect(eff_modal)
+            self._set_eff_ov    = eff_ov
+            self._set_eff_modal = eff_modal
+            anim_ov = QPropertyAnimation(eff_ov, QByteArray(b'opacity'))
+            anim_ov.setDuration(180); anim_ov.setStartValue(0.0); anim_ov.setEndValue(1.0)
+            anim_modal = QPropertyAnimation(eff_modal, QByteArray(b'opacity'))
+            anim_modal.setDuration(220)
+            anim_modal.setEasingCurve(QEasingCurve.Type.OutCubic)
+            anim_modal.setStartValue(0.0); anim_modal.setEndValue(1.0)
+            grp = QParallelAnimationGroup(self)
+            grp.addAnimation(anim_ov); grp.addAnimation(anim_modal)
+            self._set_anim = grp; grp.start()
+        else:
+            self._close_set()
 
     def _close_con(self):
         self.tab_nav.force_close_panels()
@@ -2842,7 +3544,30 @@ class NexusApp(QMainWindow):
 
     def _close_set(self):
         self.tab_nav.force_close_panels()
-        self._slide(self.set_panel, False, '_set_anim', '_set_open')
+        if not self._set_open:
+            return
+        eff_ov    = QGraphicsOpacityEffect(self.set_overlay)
+        eff_modal = QGraphicsOpacityEffect(self.set_panel)
+        self.set_overlay.setGraphicsEffect(eff_ov)
+        self.set_panel.setGraphicsEffect(eff_modal)
+        anim_ov = QPropertyAnimation(eff_ov, QByteArray(b'opacity'))
+        anim_ov.setDuration(160); anim_ov.setStartValue(1.0); anim_ov.setEndValue(0.0)
+        anim_modal = QPropertyAnimation(eff_modal, QByteArray(b'opacity'))
+        anim_modal.setDuration(160); anim_modal.setStartValue(1.0); anim_modal.setEndValue(0.0)
+        grp = QParallelAnimationGroup(self)
+        grp.addAnimation(anim_ov); grp.addAnimation(anim_modal)
+        def _hide_all():
+            self._set_open = False
+            self.set_overlay.hide()
+            self.set_panel.hide()
+            self.set_overlay.setGraphicsEffect(None)
+            self.set_panel.setGraphicsEffect(None)
+            # Remove background blur
+            self.bg_canvas.setGraphicsEffect(None)
+            # Reset card stylesheet to CSS default
+            self.set_panel.setStyleSheet('')
+        grp.finished.connect(_hide_all)
+        self._set_anim = grp; grp.start()
 
     def _animate_nav(self, new_pos: str):
         if new_pos == self._nav_pos: return
@@ -2914,27 +3639,8 @@ def main():
 
     print('[Prism] v7.3 starting…')
 
-    data_exists = DATA_FILE.exists()
-
-    if not data_exists:
-        splash_container = QWidget()
-        splash_container.setWindowTitle('Prism')
-        splash_container.resize(1300, 840)
-        splash_container.setStyleSheet(f"background:{C['bg']};")
-        splash = HelloSplash(splash_container)
-        splash.resize(splash_container.size())
-        splash_container.show()
-        win = None
-        def _launch():
-            nonlocal win
-            splash_container.close()
-            win = NexusApp()
-            win.show()
-        splash.finished.connect(_launch)
-        splash_container.resizeEvent = lambda e: splash.resize(splash_container.size())
-    else:
-        win = NexusApp()
-        win.show()
+    win = NexusApp()
+    win.show()
 
     sys.exit(app.exec())
 
